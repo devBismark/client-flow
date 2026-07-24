@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const TIERS = ['essencial', 'profissional', 'premium'];
 const STATUSES = ['briefing', 'orcamento_enviado', 'aprovado', 'em_producao', 'entregue'];
+const crypto = require('crypto');
+
 
 const briefingAnswersSchema = new mongoose.Schema(
   {
@@ -69,6 +71,16 @@ const projectSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: 2000,
+      default: '',
+    },
+    proposalToken: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: () => crypto.randomBytes(16).toString('hex'),
+    },
+    prazoEstimado: {
+      type: String,
       default: '',
     },
   },

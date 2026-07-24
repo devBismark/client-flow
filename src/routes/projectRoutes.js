@@ -49,6 +49,35 @@ router.get('/', requireAdminKey, async (req, res, next) => {
   }
 });
 
+// GET /api/projects/public/:token — proposta pública, sem autenticação
+router.get('/public/:token', async (req, res, next) => {
+  try {
+    const project = await Project.findOne({ proposalToken: req.params.token });
+
+    if (!project) {
+      return res.status(404).json({ error: { message: 'Proposta não encontrada' } });
+    }
+
+    const tier = project.finalTier || project.suggestedTier;
+    const pricing = getPricing(tier);
+
+    res.json({
+      data: {
+        clientName: project.clientName,
+        tierLabel: pricing.label,
+        priceMin: pricing.min,
+        priceMax: pricing.max,
+        entrada: pricing.min / 2,
+        prazo: project.prazoEstimado || pricing.prazo,
+        revisoes: pricing.revisoes,
+        inclui: pricing.inclui,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/projects/:id
 router.get('/:id', requireAdminKey, async (req, res, next) => {
   try {

@@ -49,8 +49,12 @@ describe('scoreTier', () => {
 });
 
 describe('getPricing', () => {
-  test('retorna faixa do premium', () => {
-    expect(getPricing('premium')).toEqual({ label: 'Premium', min: 500, max: 700 });
+  test('retorna dados do premium', () => {
+    const pricing = getPricing('premium');
+    expect(pricing.label).toBe('Premium');
+    expect(pricing.min).toBe(500);
+    expect(pricing.max).toBe(700);
+    expect(pricing.inclui.length).toBeGreaterThan(0);
   });
 
   test('retorna null para tier inexistente', () => {
