@@ -111,3 +111,5 @@ src/
 └── middlewares/  autenticação e tratamento de erro
 tests/            testes unitários e de integração
 ```
+
+
