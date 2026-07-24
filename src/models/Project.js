@@ -32,6 +32,24 @@ const projectSchema = new mongoose.Schema(
       type: briefingAnswersSchema,
       required: true,
     },
+    sobreNegocio: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: '',
+    },
+    objetivoPagina: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: '',
+    },
+    referencias: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: '',
+    },
     suggestedTier: {
       type: String,
       enum: TIERS,

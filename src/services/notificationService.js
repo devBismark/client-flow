@@ -21,17 +21,34 @@ function buildMessage(project, pricing) {
     .map(([key, label]) => `${project.briefingAnswers?.[key] ? '✅' : '➖'} ${label}`)
     .join('\n');
 
-  return [
+  const linhas = [
     '*Novo briefing recebido*',
     '',
     `*Cliente:* ${escapeMarkdown(project.clientName)}`,
     `*Contacto:* ${escapeMarkdown(project.clientContact)}`,
+  ];
+
+  if (project.sobreNegocio) {
+    linhas.push('', `*Negócio:* ${escapeMarkdown(project.sobreNegocio)}`);
+  }
+
+  if (project.objetivoPagina) {
+    linhas.push('', `*Objetivo:* ${escapeMarkdown(project.objetivoPagina)}`);
+  }
+
+  if (project.referencias) {
+    linhas.push('', `*Referências:* ${escapeMarkdown(project.referencias)}`);
+  }
+
+  linhas.push(
     '',
     respostas,
     '',
     `*Pacote sugerido:* ${TIER_LABEL[project.suggestedTier]}`,
-    `*Faixa:* ${pricing.min}–${pricing.max}€ \\(entrada ${pricing.min / 2}€\\)`,
-  ].join('\n');
+    `*Faixa:* ${pricing.min}–${pricing.max}€ \\(entrada ${pricing.min / 2}€\\)`
+  );
+
+  return linhas.join('\n');
 }
 
 async function notifyNewBriefing(project, pricing) {

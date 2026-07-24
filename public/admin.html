@@ -161,8 +161,9 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
     gap: 16px;
+    align-items: start;
   }
 
   .card {
@@ -232,6 +233,55 @@
     height: 1px;
     background: var(--hairline);
     margin: 18px 0;
+  }
+
+  /* ─── briefing texts ─────────────────── */
+
+  .brief-block { margin-bottom: 14px; }
+  .brief-block:last-child { margin-bottom: 0; }
+
+  .brief-label {
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    margin-bottom: 5px;
+  }
+
+  .brief-text {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #B4B9C0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .brief-text a { color: var(--steel-2); }
+
+  .clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .toggle {
+    background: none;
+    border: 0;
+    padding: 4px 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .1em;
+    color: var(--steel-3);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .toggle:hover { color: var(--steel-2); }
+
+  .no-context {
+    font-size: 11px;
+    color: #3C4048;
+    font-style: italic;
   }
 
   .answers { font-size: 11px; line-height: 1.95; color: #4E535B; }
@@ -365,6 +415,12 @@ const LABELS = {
   materialDeSobra: 'tem material'
 };
 
+const BRIEF_FIELDS = [
+  ['sobreNegocio', 'Negócio'],
+  ['objetivoPagina', 'Objetivo'],
+  ['referencias', 'Referências']
+];
+
 const STATUSES = ['briefing','orcamento_enviado','aprovado','em_producao','entregue'];
 const STATUS_LABEL = {
   briefing: 'Briefing',
@@ -387,6 +443,13 @@ function escapeHtml(str) {
   })[c]);
 }
 
+// transforma URLs em links, depois de escapar o HTML
+function linkify(escaped) {
+  return escaped.replace(/(https?:\/\/[^\s<]+)/g, url =>
+    `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+  );
+}
+
 async function carregar() {
   const status = document.getElementById('filtro').value;
   const url = '/api/projects' + (status ? '?status=' + status : '');
@@ -401,6 +464,29 @@ async function carregar() {
     empty.textContent = err.message;
     empty.style.display = 'block';
   }
+}
+
+function briefingBlocks(p) {
+  const blocks = BRIEF_FIELDS
+    .filter(([key]) => p[key])
+    .map(([key, label]) => {
+      const escaped = escapeHtml(p[key]);
+      const content = key === 'referencias' ? linkify(escaped) : escaped;
+      const longo = p[key].length > 160;
+      return `
+        <div class="brief-block">
+          <div class="brief-label">${label}</div>
+          <div class="brief-text ${longo ? 'clamp' : ''}">${content}</div>
+          ${longo ? '<button class="toggle">ver mais</button>' : ''}
+        </div>
+      `;
+    });
+
+  if (!blocks.length) {
+    return '<div class="no-context">Sem contexto adicional.</div>';
+  }
+
+  return blocks.join('');
 }
 
 function render(projetos) {
@@ -442,6 +528,9 @@ function render(projetos) {
         ${foiAjustado ? '<span class="adjusted">ajustado</span>' : ''}
 
         <div class="hairline"></div>
+        ${briefingBlocks(p)}
+
+        <div class="hairline"></div>
         <div class="answers">${answers}</div>
         <div class="hairline"></div>
 
@@ -470,6 +559,15 @@ function render(projetos) {
 }
 
 function bindEvents() {
+  document.querySelectorAll('.toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = btn.previousElementSibling;
+      const aberto = !text.classList.contains('clamp');
+      text.classList.toggle('clamp', aberto);
+      btn.textContent = aberto ? 'ver mais' : 'ver menos';
+    });
+  });
+
   document.querySelectorAll('.card').forEach(card => {
     const id = card.dataset.id;
 

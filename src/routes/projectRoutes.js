@@ -9,7 +9,7 @@ const router = express.Router();
 // POST /api/projects — público (o cliente preenche o briefing)
 router.post('/', async (req, res, next) => {
   try {
-    const { clientName, clientContact, briefingAnswers } = req.body;
+    const { clientName, clientContact, briefingAnswers, sobreNegocio, objetivoPagina, referencias } = req.body;
 
     const suggestedTier = scoreTier(briefingAnswers);
 
@@ -17,12 +17,14 @@ router.post('/', async (req, res, next) => {
       clientName,
       clientContact,
       briefingAnswers,
+      sobreNegocio,
+      objetivoPagina,
+      referencias,
       suggestedTier,
     });
 
     res.status(201).json({ data: project });
 
-    // Notificação não bloqueia a resposta ao cliente
     notifyNewBriefing(project, getPricing(suggestedTier));
   } catch (error) {
     next(error);

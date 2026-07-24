@@ -10,7 +10,6 @@
 <style>
   :root {
     --void: #050506;
-    --ink: #0A0A0C;
     --steel-1: #6E7480;
     --steel-2: #C9CDD4;
     --steel-3: #8A9098;
@@ -33,7 +32,6 @@
     overflow-x: hidden;
   }
 
-  /* ambient metallic wash */
   body::before {
     content: '';
     position: fixed;
@@ -45,7 +43,6 @@
     z-index: 0;
   }
 
-  /* fine horizontal scanline grid */
   body::after {
     content: '';
     position: fixed;
@@ -115,6 +112,25 @@
     max-width: 46ch;
   }
 
+  /* ─── section divider ────────────────── */
+
+  .section {
+    font-size: 10px;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    margin: 52px 0 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .section::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--hairline), transparent);
+  }
+
   /* ─── fields ─────────────────────────── */
 
   .field { margin-bottom: 26px; }
@@ -126,6 +142,16 @@
     text-transform: uppercase;
     color: var(--steel-3);
     margin-bottom: 10px;
+  }
+
+  .hint {
+    display: block;
+    font-size: 11px;
+    color: #4E535B;
+    margin: -4px 0 10px;
+    line-height: 1.6;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   input[type=text] {
@@ -145,17 +171,37 @@
     border-bottom-color: var(--steel-2);
   }
 
+  textarea {
+    width: 100%;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 14px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    min-height: 96px;
+    resize: vertical;
+    transition: border-color .25s ease;
+  }
+  textarea::placeholder { color: #3C4048; }
+  textarea:focus { outline: none; border-color: var(--steel-2); }
+
+  .counter {
+    text-align: right;
+    font-size: 10px;
+    color: #3C4048;
+    margin-top: 6px;
+    letter-spacing: .06em;
+  }
+  .counter.near { color: var(--steel-3); }
+
   /* ─── checklist ──────────────────────── */
 
-  fieldset { border: 0; padding: 0; margin: 46px 0 0; }
-
-  legend {
-    font-size: 10px;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: var(--steel-3);
-    padding: 0 0 18px;
-  }
+  fieldset { border: 0; padding: 0; margin: 0; }
 
   .q {
     display: grid;
@@ -265,7 +311,7 @@
 
   <p class="index">Briefing / 01</p>
   <h1>Conta um pouco<br>sobre o teu projeto</h1>
-  <p class="lead">Cinco perguntas rápidas para eu perceber o que o teu site precisa. Leva menos de dois minutos.</p>
+  <p class="lead">Algumas perguntas para eu perceber o que o teu site precisa. Leva menos de cinco minutos.</p>
 
   <div class="field">
     <label class="cap" for="nome">Nome do negócio</label>
@@ -277,9 +323,32 @@
     <input type="text" id="contato" placeholder="@onegocio ou email" autocomplete="email">
   </div>
 
-  <fieldset>
-    <legend>Marca o que se aplica</legend>
+  <div class="section">Contexto</div>
 
+  <div class="field">
+    <label class="cap" for="sobreNegocio">O que fazes, e para quem?</label>
+    <span class="hint">Descreve o teu serviço ou produto e quem são os teus clientes.</span>
+    <textarea id="sobreNegocio" maxlength="1000" placeholder="ex: Faço manicure e nail art em estúdio próprio, sobretudo para mulheres entre os 25 e 45 anos que procuram algo mais cuidado do que o salão de bairro."></textarea>
+    <div class="counter" data-for="sobreNegocio">0 / 1000</div>
+  </div>
+
+  <div class="field">
+    <label class="cap" for="objetivoPagina">O que queres que a pessoa faça na página?</label>
+    <span class="hint">Marcar? Contactar-te no WhatsApp? Seguir-te no Instagram? Comprar?</span>
+    <textarea id="objetivoPagina" maxlength="1000" placeholder="ex: Quero que cliquem para marcar diretamente pelo WhatsApp."></textarea>
+    <div class="counter" data-for="objetivoPagina">0 / 1000</div>
+  </div>
+
+  <div class="field">
+    <label class="cap" for="referencias">Sites ou perfis que admiras</label>
+    <span class="hint">Cola links, mesmo que sejam de outra área. Ajuda-me a perceber o teu gosto.</span>
+    <textarea id="referencias" maxlength="1000" placeholder="ex: https://exemplo.com — gosto do estilo limpo e das fotos grandes"></textarea>
+    <div class="counter" data-for="referencias">0 / 1000</div>
+  </div>
+
+  <div class="section">Âmbito</div>
+
+  <fieldset>
     <label class="q">
       <input type="checkbox" data-k="multiploServicos">
       <span class="box"></span>
@@ -320,6 +389,16 @@
 const btn = document.getElementById('enviar');
 const msg = document.getElementById('msg');
 
+// contadores de caracteres
+document.querySelectorAll('textarea').forEach(ta => {
+  const counter = document.querySelector(`[data-for="${ta.id}"]`);
+  ta.addEventListener('input', () => {
+    const n = ta.value.length;
+    counter.textContent = `${n} / 1000`;
+    counter.classList.toggle('near', n > 850);
+  });
+});
+
 btn.addEventListener('click', async () => {
   const clientName = document.getElementById('nome').value.trim();
   const clientContact = document.getElementById('contato').value.trim();
@@ -335,6 +414,15 @@ btn.addEventListener('click', async () => {
     briefingAnswers[el.dataset.k] = el.checked;
   });
 
+  const payload = {
+    clientName,
+    clientContact,
+    briefingAnswers,
+    sobreNegocio: document.getElementById('sobreNegocio').value.trim(),
+    objetivoPagina: document.getElementById('objetivoPagina').value.trim(),
+    referencias: document.getElementById('referencias').value.trim(),
+  };
+
   btn.disabled = true;
   btn.textContent = 'A enviar';
 
@@ -342,7 +430,7 @@ btn.addEventListener('click', async () => {
     const res = await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientName, clientContact, briefingAnswers })
+      body: JSON.stringify(payload)
     });
 
     const body = await res.json();
@@ -351,8 +439,12 @@ btn.addEventListener('click', async () => {
     msg.className = 'msg ok';
     msg.textContent = 'Briefing recebido. Entro em contacto em breve com a proposta.';
 
-    document.querySelectorAll('input').forEach(el => {
+    document.querySelectorAll('input, textarea').forEach(el => {
       if (el.type === 'checkbox') el.checked = false; else el.value = '';
+    });
+    document.querySelectorAll('.counter').forEach(c => {
+      c.textContent = '0 / 1000';
+      c.classList.remove('near');
     });
   } catch (err) {
     msg.className = 'msg err';
