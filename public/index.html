@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Briefing — Projeto de Landing Page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #050506;
+    --ink: #0A0A0C;
+    --steel-1: #6E7480;
+    --steel-2: #C9CDD4;
+    --steel-3: #8A9098;
+    --text: #FFFFFF;
+    --muted: #7C828C;
+    --glass: rgba(255,255,255,0.03);
+    --hairline: rgba(255,255,255,0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Space Mono', ui-monospace, monospace;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ambient metallic wash */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(700px 400px at 15% -5%, rgba(201,205,212,0.07), transparent 65%),
+      radial-gradient(600px 500px at 105% 60%, rgba(110,116,128,0.06), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* fine horizontal scanline grid */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.014) 0px,
+      rgba(255,255,255,0.014) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 64px 24px 96px;
+  }
+
+  /* ─── header ─────────────────────────── */
+
+  .mark {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: .34em;
+    background: linear-gradient(100deg, #FFFFFF 0%, var(--steel-2) 28%, var(--steel-1) 52%, var(--steel-2) 74%, #FFFFFF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 40px;
+  }
+
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--steel-1) 15%, var(--steel-2) 50%, var(--steel-1) 85%, transparent);
+    opacity: .5;
+    margin: 0 0 40px;
+  }
+
+  .index {
+    font-size: 10px;
+    letter-spacing: .28em;
+    color: var(--steel-3);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 27px;
+    line-height: 1.28;
+    letter-spacing: .01em;
+    margin: 0 0 14px;
+  }
+
+  .lead {
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--muted);
+    margin: 0 0 48px;
+    max-width: 46ch;
+  }
+
+  /* ─── fields ─────────────────────────── */
+
+  .field { margin-bottom: 26px; }
+
+  label.cap {
+    display: block;
+    font-size: 10px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    margin-bottom: 10px;
+  }
+
+  input[type=text] {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hairline);
+    padding: 11px 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    transition: border-color .25s ease;
+  }
+  input[type=text]::placeholder { color: #3C4048; }
+  input[type=text]:focus {
+    outline: none;
+    border-bottom-color: var(--steel-2);
+  }
+
+  /* ─── checklist ──────────────────────── */
+
+  fieldset { border: 0; padding: 0; margin: 46px 0 0; }
+
+  legend {
+    font-size: 10px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    padding: 0 0 18px;
+  }
+
+  .q {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    align-items: center;
+    gap: 4px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 15px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    position: relative;
+    transition: border-color .22s ease, background .22s ease;
+  }
+  .q:hover { border-color: rgba(201,205,212,0.24); }
+
+  .q input { position: absolute; opacity: 0; pointer-events: none; }
+
+  .box {
+    width: 13px;
+    height: 13px;
+    border: 1px solid var(--steel-1);
+    border-radius: 1px;
+    position: relative;
+    transition: all .2s ease;
+  }
+  .box::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: linear-gradient(135deg, #FFFFFF, var(--steel-2));
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+  .q input:checked ~ .box { border-color: var(--steel-2); }
+  .q input:checked ~ .box::after { opacity: 1; }
+  .q input:focus-visible ~ .box { outline: 1px solid var(--steel-2); outline-offset: 3px; }
+
+  .q span { font-size: 13px; line-height: 1.6; color: #C4C8CE; }
+  .q input:checked ~ span { color: var(--text); }
+
+  /* ─── action ─────────────────────────── */
+
+  button {
+    width: 100%;
+    margin-top: 44px;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--steel-1);
+    border-radius: 2px;
+    padding: 17px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: .26em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .25s ease, color .25s ease;
+  }
+  button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.09), transparent);
+    transform: translateX(-100%);
+    transition: transform .6s ease;
+  }
+  button:hover:not(:disabled) { border-color: var(--steel-2); }
+  button:hover:not(:disabled)::before { transform: translateX(100%); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+
+  .msg {
+    display: none;
+    margin-top: 24px;
+    padding: 16px 18px;
+    border-radius: 2px;
+    font-size: 12.5px;
+    line-height: 1.65;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-left: 2px solid;
+  }
+  .msg.ok { display: block; border-left-color: var(--steel-2); color: #D8DCE2; }
+  .msg.err { display: block; border-left-color: #A85A5A; color: #E0BCBC; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 44px 20px 72px; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mark">IDISTØPIC</div>
+  <div class="rule"></div>
+
+  <p class="index">Briefing / 01</p>
+  <h1>Conta um pouco<br>sobre o teu projeto</h1>
+  <p class="lead">Cinco perguntas rápidas para eu perceber o que o teu site precisa. Leva menos de dois minutos.</p>
+
+  <div class="field">
+    <label class="cap" for="nome">Nome do negócio</label>
+    <input type="text" id="nome" placeholder="ex: Jessie Nails" autocomplete="organization">
+  </div>
+
+  <div class="field">
+    <label class="cap" for="contato">Contacto</label>
+    <input type="text" id="contato" placeholder="@onegocio ou email" autocomplete="email">
+  </div>
+
+  <fieldset>
+    <legend>Marca o que se aplica</legend>
+
+    <label class="q">
+      <input type="checkbox" data-k="multiploServicos">
+      <span class="box"></span>
+      <span>Tenho mais do que um serviço ou produto para apresentar</span>
+    </label>
+
+    <label class="q">
+      <input type="checkbox" data-k="querAparecerGoogle">
+      <span class="box"></span>
+      <span>Quero aparecer nas pesquisas do Google na minha zona</span>
+    </label>
+
+    <label class="q">
+      <input type="checkbox" data-k="temConcorrenteReferencia">
+      <span class="box"></span>
+      <span>Tenho um site de referência que admiro</span>
+    </label>
+
+    <label class="q">
+      <input type="checkbox" data-k="querInteracao">
+      <span class="box"></span>
+      <span>Imagino algo interativo — animação, antes/depois, efeitos</span>
+    </label>
+
+    <label class="q">
+      <input type="checkbox" data-k="materialDeSobra">
+      <span class="box"></span>
+      <span>Já tenho fotos ou vídeos de boa qualidade</span>
+    </label>
+  </fieldset>
+
+  <button id="enviar">Enviar briefing</button>
+  <div class="msg" id="msg"></div>
+
+</div>
+
+<script>
+const btn = document.getElementById('enviar');
+const msg = document.getElementById('msg');
+
+btn.addEventListener('click', async () => {
+  const clientName = document.getElementById('nome').value.trim();
+  const clientContact = document.getElementById('contato').value.trim();
+
+  if (!clientName || !clientContact) {
+    msg.className = 'msg err';
+    msg.textContent = 'Preenche o nome do negócio e o contacto.';
+    return;
+  }
+
+  const briefingAnswers = {};
+  document.querySelectorAll('[data-k]').forEach(el => {
+    briefingAnswers[el.dataset.k] = el.checked;
+  });
+
+  btn.disabled = true;
+  btn.textContent = 'A enviar';
+
+  try {
+    const res = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientName, clientContact, briefingAnswers })
+    });
+
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível enviar. Tenta outra vez.');
+
+    msg.className = 'msg ok';
+    msg.textContent = 'Briefing recebido. Entro em contacto em breve com a proposta.';
+
+    document.querySelectorAll('input').forEach(el => {
+      if (el.type === 'checkbox') el.checked = false; else el.value = '';
+    });
+  } catch (err) {
+    msg.className = 'msg err';
+    msg.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar briefing';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+# client-flow
+
+API para automatizar o fluxo comercial de projetos de landing page: recebe o briefing do cliente, classifica automaticamente o pacote adequado e acompanha o status do projeto até a entrega.
+
+## Stack
+
+- Node.js + Express
+- MongoDB (Mongoose)
+- Jest + Supertest + mongodb-memory-server
+
+## Como executar
+
+```bash
+npm install
+cp .env.example .env   # preencher as variáveis
+npm run dev
+```
+
+Servidor em `http://localhost:3333`.
+
+## Variáveis de ambiente
+
+| Variável | Descrição |
+|---|---|
+| `PORT` | Porta do servidor (padrão: 3000) |
+| `MONGODB_URI` | String de conexão do MongoDB |
+| `ADMIN_KEY` | Chave para as rotas administrativas |
+
+## Testes
+
+```bash
+npm test
+```
+
+## Regra de classificação
+
+Cada resposta positiva do briefing soma pontos:
+
+| Resposta | Peso |
+|---|---|
+| Múltiplos serviços | 1 |
+| Quer aparecer no Google | 1 |
+| Tem concorrente de referência | 2 |
+| Quer interação/animação | 2 |
+| Tem material de sobra | 1 |
+
+| Pontuação | Pacote | Faixa |
+|---|---|---|
+| 0–1 | Essencial | 150–200€ |
+| 2–3 | Profissional | 300–400€ |
+| 4+ | Premium | 500–700€ |
+
+## Endpoints
+
+Rotas administrativas exigem o header `x-admin-key`.
+
+| Método | Rota | Auth | Descrição |
+|---|---|---|---|
+| GET | `/health` | — | Health check |
+| POST | `/api/projects` | — | Cria projeto a partir do briefing |
+| GET | `/api/projects` | ✅ | Lista projetos (`?page`, `?limit`, `?status`) |
+| GET | `/api/projects/:id` | ✅ | Detalhe do projeto |
+| GET | `/api/projects/:id/proposal` | ✅ | Gera dados do orçamento |
+| PATCH | `/api/projects/:id/status` | ✅ | Atualiza o status |
+
+### Exemplo — criar projeto
+
+```http
+POST /api/projects
+Content-Type: application/json
+
+{
+  "clientName": "Jessie Nails",
+  "clientContact": "@jes.sienails",
+  "briefingAnswers": {
+    "multiploServicos": true,
+    "querAparecerGoogle": true,
+    "temConcorrenteReferencia": true,
+    "querInteracao": true,
+    "materialDeSobra": true
+  }
+}
+```
+
+Resposta `201`:
+
+```json
+{
+  "data": {
+    "_id": "...",
+    "clientName": "Jessie Nails",
+    "suggestedTier": "premium",
+    "status": "briefing",
+    "createdAt": "..."
+  }
+}
+```
+
+## Status do projeto
+
+`briefing` → `orcamento_enviado` → `aprovado` → `em_producao` → `entregue`
+
+## Estrutura
+
+```
+src/
+├── config/       conexão com o banco
+├── models/       schema do Mongoose
+├── services/     regra de negócio (isolada de HTTP e banco)
+├── routes/       endpoints
+└── middlewares/  autenticação e tratamento de erro
+tests/            testes unitários e de integração
+```
