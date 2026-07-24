@@ -2,6 +2,7 @@ const express = require('express');
 const { scoreTier, getPricing } = require('../services/tierService');
 const { requireAdminKey } = require('../middlewares/auth');
 const { Project, STATUSES, TIERS } = require('../models/Project');
+const { notifyNewBriefing } = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -20,6 +21,9 @@ router.post('/', async (req, res, next) => {
     });
 
     res.status(201).json({ data: project });
+
+    // Notificação não bloqueia a resposta ao cliente
+    notifyNewBriefing(project, getPricing(suggestedTier));
   } catch (error) {
     next(error);
   }
