@@ -1,15 +1,24 @@
 const express = require('express');
+const multer = require('multer');
 const { scoreTier, getPricing } = require('../services/tierService');
 const { requireAdminKey } = require('../middlewares/auth');
 const { Project, STATUSES, TIERS } = require('../models/Project');
 const { notifyNewBriefing } = require('../services/notificationService');
-
+const { saveClientPhotos } = require('../services/assetStorage');
 const router = express.Router();
 
-// POST /api/projects — público (o cliente preenche o briefing)
-router.post('/', async (req, res, next) => {
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 10 },
+});
+
+// POST /api/projects — público (o cliente preenche o briefing + até 10 fotos)
+router.post('/', upload.array('photos', 10), async (req, res, next) => {
   try {
-    const { clientName, clientContact, briefingAnswers, sobreNegocio, objetivoPagina, referencias } = req.body;
+   const { clientName, clientContact, sobreNegocio, objetivoPagina, referencias } = req.body;
+const briefingAnswers = typeof req.body.briefingAnswers === 'string'
+  ? JSON.parse(req.body.briefingAnswers)
+  : req.body.briefingAnswers;
 
     const suggestedTier = scoreTier(briefingAnswers);
 
@@ -25,7 +34,8 @@ router.post('/', async (req, res, next) => {
 
     res.status(201).json({ data: project });
 
-    notifyNewBriefing(project, getPricing(suggestedTier));
+  saveClientPhotos(project, req.files);
+  notifyNewBriefing(project, getPricing(suggestedTier), req.files);
   } catch (error) {
     next(error);
   }
@@ -143,6 +153,7 @@ router.get('/:id/proposal', requireAdminKey, async (req, res, next) => {
     next(error);
   }
 });
+
 // PATCH /api/projects/:id — atualiza tier final e notas
 router.patch('/:id', requireAdminKey, async (req, res, next) => {
   try {
@@ -180,4 +191,5 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
     next(error);
   }
 });
+
 module.exports = router;

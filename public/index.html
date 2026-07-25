@@ -18,289 +18,99 @@
     --glass: rgba(255,255,255,0.03);
     --hairline: rgba(255,255,255,0.08);
   }
-
   * { box-sizing: border-box; }
-
   body {
-    margin: 0;
-    min-height: 100vh;
-    background: var(--void);
-    color: var(--text);
-    font-family: 'Space Mono', ui-monospace, monospace;
-    -webkit-font-smoothing: antialiased;
-    position: relative;
-    overflow-x: hidden;
+    margin: 0; min-height: 100vh; background: var(--void); color: var(--text);
+    font-family: 'Space Mono', ui-monospace, monospace; -webkit-font-smoothing: antialiased;
+    position: relative; overflow-x: hidden;
   }
-
   body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
+    content: ''; position: fixed; inset: 0;
     background:
       radial-gradient(700px 400px at 15% -5%, rgba(201,205,212,0.07), transparent 65%),
       radial-gradient(600px 500px at 105% 60%, rgba(110,116,128,0.06), transparent 60%);
-    pointer-events: none;
-    z-index: 0;
+    pointer-events: none; z-index: 0;
   }
-
   body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: repeating-linear-gradient(
-      to bottom,
-      rgba(255,255,255,0.014) 0px,
-      rgba(255,255,255,0.014) 1px,
-      transparent 1px,
-      transparent 4px
-    );
-    pointer-events: none;
-    z-index: 0;
+    content: ''; position: fixed; inset: 0;
+    background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 4px);
+    pointer-events: none; z-index: 0;
   }
-
-  .wrap {
-    position: relative;
-    z-index: 1;
-    max-width: 620px;
-    margin: 0 auto;
-    padding: 64px 24px 96px;
-  }
-
-  /* ─── header ─────────────────────────── */
-
+  .wrap { position: relative; z-index: 1; max-width: 620px; margin: 0 auto; padding: 64px 24px 96px; }
   .mark {
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 900;
-    font-size: 13px;
-    letter-spacing: .34em;
+    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: .34em;
     background: linear-gradient(100deg, #FFFFFF 0%, var(--steel-2) 28%, var(--steel-1) 52%, var(--steel-2) 74%, #FFFFFF 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 40px;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 40px;
   }
-
-  .rule {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--steel-1) 15%, var(--steel-2) 50%, var(--steel-1) 85%, transparent);
-    opacity: .5;
-    margin: 0 0 40px;
-  }
-
-  .index {
-    font-size: 10px;
-    letter-spacing: .28em;
-    color: var(--steel-3);
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-
-  h1 {
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 700;
-    font-size: 27px;
-    line-height: 1.28;
-    letter-spacing: .01em;
-    margin: 0 0 14px;
-  }
-
-  .lead {
-    font-size: 13px;
-    line-height: 1.75;
-    color: var(--muted);
-    margin: 0 0 48px;
-    max-width: 46ch;
-  }
-
-  /* ─── section divider ────────────────── */
-
-  .section {
-    font-size: 10px;
-    letter-spacing: .24em;
-    text-transform: uppercase;
-    color: var(--steel-3);
-    margin: 52px 0 22px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .section::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, var(--hairline), transparent);
-  }
-
-  /* ─── fields ─────────────────────────── */
-
+  .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--steel-1) 15%, var(--steel-2) 50%, var(--steel-1) 85%, transparent); opacity: .5; margin: 0 0 40px; }
+  .index { font-size: 10px; letter-spacing: .28em; color: var(--steel-3); text-transform: uppercase; margin-bottom: 14px; }
+  h1 { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 27px; line-height: 1.28; letter-spacing: .01em; margin: 0 0 14px; }
+  .lead { font-size: 13px; line-height: 1.75; color: var(--muted); margin: 0 0 48px; max-width: 46ch; }
+  .section { font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--steel-3); margin: 52px 0 22px; display: flex; align-items: center; gap: 14px; }
+  .section::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--hairline), transparent); }
   .field { margin-bottom: 26px; }
-
-  label.cap {
-    display: block;
-    font-size: 10px;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: var(--steel-3);
-    margin-bottom: 10px;
-  }
-
-  .hint {
-    display: block;
-    font-size: 11px;
-    color: #4E535B;
-    margin: -4px 0 10px;
-    line-height: 1.6;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-
+  label.cap { display: block; font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--steel-3); margin-bottom: 10px; }
+  .hint { display: block; font-size: 11px; color: #4E535B; margin: -4px 0 10px; line-height: 1.6; text-transform: none; letter-spacing: 0; }
   input[type=text] {
-    width: 100%;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--hairline);
-    padding: 11px 2px;
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 15px;
-    transition: border-color .25s ease;
+    width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--hairline); padding: 11px 2px;
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 15px; transition: border-color .25s ease;
   }
   input[type=text]::placeholder { color: #3C4048; }
-  input[type=text]:focus {
-    outline: none;
-    border-bottom-color: var(--steel-2);
-  }
-
+  input[type=text]:focus { outline: none; border-bottom-color: var(--steel-2); }
   textarea {
-    width: 100%;
-    background: var(--glass);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
-    padding: 14px;
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 13.5px;
-    line-height: 1.7;
-    min-height: 96px;
-    resize: vertical;
-    transition: border-color .25s ease;
+    width: 100%; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--hairline); border-radius: 3px; padding: 14px; color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 13.5px; line-height: 1.7; min-height: 96px; resize: vertical; transition: border-color .25s ease;
   }
   textarea::placeholder { color: #3C4048; }
   textarea:focus { outline: none; border-color: var(--steel-2); }
-
-  .counter {
-    text-align: right;
-    font-size: 10px;
-    color: #3C4048;
-    margin-top: 6px;
-    letter-spacing: .06em;
-  }
+  .counter { text-align: right; font-size: 10px; color: #3C4048; margin-top: 6px; letter-spacing: .06em; }
   .counter.near { color: var(--steel-3); }
-
-  /* ─── checklist ──────────────────────── */
-
   fieldset { border: 0; padding: 0; margin: 0; }
-
   .q {
-    display: grid;
-    grid-template-columns: 30px 1fr;
-    align-items: center;
-    gap: 4px;
-    background: var(--glass);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
-    padding: 15px 16px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    position: relative;
-    transition: border-color .22s ease, background .22s ease;
+    display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 4px;
+    background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--hairline); border-radius: 3px; padding: 15px 16px; margin-bottom: 8px;
+    cursor: pointer; position: relative; transition: border-color .22s ease, background .22s ease;
   }
   .q:hover { border-color: rgba(201,205,212,0.24); }
-
   .q input { position: absolute; opacity: 0; pointer-events: none; }
-
-  .box {
-    width: 13px;
-    height: 13px;
-    border: 1px solid var(--steel-1);
-    border-radius: 1px;
-    position: relative;
-    transition: all .2s ease;
-  }
-  .box::after {
-    content: '';
-    position: absolute;
-    inset: 2px;
-    background: linear-gradient(135deg, #FFFFFF, var(--steel-2));
-    opacity: 0;
-    transition: opacity .2s ease;
-  }
+  .box { width: 13px; height: 13px; border: 1px solid var(--steel-1); border-radius: 1px; position: relative; transition: all .2s ease; }
+  .box::after { content: ''; position: absolute; inset: 2px; background: linear-gradient(135deg, #FFFFFF, var(--steel-2)); opacity: 0; transition: opacity .2s ease; }
   .q input:checked ~ .box { border-color: var(--steel-2); }
   .q input:checked ~ .box::after { opacity: 1; }
   .q input:focus-visible ~ .box { outline: 1px solid var(--steel-2); outline-offset: 3px; }
-
   .q span { font-size: 13px; line-height: 1.6; color: #C4C8CE; }
   .q input:checked ~ span { color: var(--text); }
-
-  /* ─── action ─────────────────────────── */
-
+  .filebox {
+    display: block; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px dashed var(--hairline); border-radius: 3px; padding: 20px 16px; text-align: center;
+    font-size: 12px; letter-spacing: .08em; color: #C4C8CE; cursor: pointer; transition: border-color .22s ease;
+  }
+  .filebox:hover { border-color: rgba(201,205,212,0.24); }
+  .filebox:focus-within { border-color: var(--steel-2); }
   button {
-    width: 100%;
-    margin-top: 44px;
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--steel-1);
-    border-radius: 2px;
-    padding: 17px;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 700;
-    font-size: 11px;
-    letter-spacing: .26em;
-    text-transform: uppercase;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
+    width: 100%; margin-top: 44px; background: transparent; color: var(--text); border: 1px solid var(--steel-1);
+    border-radius: 2px; padding: 17px; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 11px;
+    letter-spacing: .26em; text-transform: uppercase; cursor: pointer; position: relative; overflow: hidden;
     transition: border-color .25s ease, color .25s ease;
   }
   button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
+    content: ''; position: absolute; inset: 0;
     background: linear-gradient(100deg, transparent, rgba(255,255,255,0.09), transparent);
-    transform: translateX(-100%);
-    transition: transform .6s ease;
+    transform: translateX(-100%); transition: transform .6s ease;
   }
   button:hover:not(:disabled) { border-color: var(--steel-2); }
   button:hover:not(:disabled)::before { transform: translateX(100%); }
   button:disabled { opacity: .35; cursor: not-allowed; }
-
   .msg {
-    display: none;
-    margin-top: 24px;
-    padding: 16px 18px;
-    border-radius: 2px;
-    font-size: 12.5px;
-    line-height: 1.65;
-    background: var(--glass);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-left: 2px solid;
+    display: none; margin-top: 24px; padding: 16px 18px; border-radius: 2px; font-size: 12.5px; line-height: 1.65;
+    background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-left: 2px solid;
   }
   .msg.ok { display: block; border-left-color: var(--steel-2); color: #D8DCE2; }
   .msg.err { display: block; border-left-color: #A85A5A; color: #E0BCBC; }
-
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
-  }
-
-  @media (max-width: 560px) {
-    .wrap { padding: 44px 20px 72px; }
-    h1 { font-size: 22px; }
-  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (max-width: 560px) { .wrap { padding: 44px 20px 72px; } h1 { font-size: 22px; } }
 </style>
 </head>
 <body>
@@ -346,6 +156,18 @@
     <div class="counter" data-for="referencias">0 / 1000</div>
   </div>
 
+  <div class="section">Fotos</div>
+
+  <div class="field">
+    <label class="cap" for="photos">Fotos do teu trabalho (até 10)</label>
+    <span class="hint">Fotos de produtos, do espaço, do antes/depois — o que tiveres. Máximo 5MB por foto.</span>
+    <label class="filebox" for="photos">
+      <span id="fileboxText">Escolher fotos</span>
+    </label>
+    <input type="file" id="photos" accept="image/*" multiple style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden;">
+    <div class="counter" id="photosCounter">0 / 10 fotos selecionadas</div>
+  </div>
+
   <div class="section">Âmbito</div>
 
   <fieldset>
@@ -388,8 +210,13 @@
 <script>
 const btn = document.getElementById('enviar');
 const msg = document.getElementById('msg');
+const photosInput = document.getElementById('photos');
+const photosCounter = document.getElementById('photosCounter');
+const fileboxText = document.getElementById('fileboxText');
 
-// contadores de caracteres
+const MAX_PHOTOS = 10;
+const MAX_SIZE = 5 * 1024 * 1024;
+
 document.querySelectorAll('textarea').forEach(ta => {
   const counter = document.querySelector(`[data-for="${ta.id}"]`);
   ta.addEventListener('input', () => {
@@ -397,6 +224,34 @@ document.querySelectorAll('textarea').forEach(ta => {
     counter.textContent = `${n} / 1000`;
     counter.classList.toggle('near', n > 850);
   });
+});
+
+photosInput.addEventListener('change', () => {
+  const files = Array.from(photosInput.files);
+
+  if (files.length > MAX_PHOTOS) {
+    msg.className = 'msg err';
+    msg.textContent = `Escolhe no máximo ${MAX_PHOTOS} fotos.`;
+    photosInput.value = '';
+    photosCounter.textContent = `0 / ${MAX_PHOTOS} fotos selecionadas`;
+    fileboxText.textContent = 'Escolher fotos';
+    return;
+  }
+
+  const tooLarge = files.find(f => f.size > MAX_SIZE);
+  if (tooLarge) {
+    msg.className = 'msg err';
+    msg.textContent = `"${tooLarge.name}" é maior que 5MB.`;
+    photosInput.value = '';
+    photosCounter.textContent = `0 / ${MAX_PHOTOS} fotos selecionadas`;
+    fileboxText.textContent = 'Escolher fotos';
+    return;
+  }
+
+  msg.className = '';
+  msg.textContent = '';
+  photosCounter.textContent = `${files.length} / ${MAX_PHOTOS} fotos selecionadas`;
+  fileboxText.textContent = files.length ? `${files.length} foto(s) selecionada(s)` : 'Escolher fotos';
 });
 
 btn.addEventListener('click', async () => {
@@ -414,14 +269,17 @@ btn.addEventListener('click', async () => {
     briefingAnswers[el.dataset.k] = el.checked;
   });
 
-  const payload = {
-    clientName,
-    clientContact,
-    briefingAnswers,
-    sobreNegocio: document.getElementById('sobreNegocio').value.trim(),
-    objetivoPagina: document.getElementById('objetivoPagina').value.trim(),
-    referencias: document.getElementById('referencias').value.trim(),
-  };
+  const formData = new FormData();
+  formData.append('clientName', clientName);
+  formData.append('clientContact', clientContact);
+  formData.append('briefingAnswers', JSON.stringify(briefingAnswers));
+  formData.append('sobreNegocio', document.getElementById('sobreNegocio').value.trim());
+  formData.append('objetivoPagina', document.getElementById('objetivoPagina').value.trim());
+  formData.append('referencias', document.getElementById('referencias').value.trim());
+
+  Array.from(photosInput.files).forEach(file => {
+    formData.append('photos', file);
+  });
 
   btn.disabled = true;
   btn.textContent = 'A enviar';
@@ -429,8 +287,7 @@ btn.addEventListener('click', async () => {
   try {
     const res = await fetch('/api/projects', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: formData
     });
 
     const body = await res.json();
@@ -440,9 +297,13 @@ btn.addEventListener('click', async () => {
     msg.textContent = 'Briefing recebido. Entro em contacto em breve com a proposta.';
 
     document.querySelectorAll('input, textarea').forEach(el => {
-      if (el.type === 'checkbox') el.checked = false; else el.value = '';
+      if (el.type === 'checkbox') el.checked = false;
+      else if (el.type !== 'file') el.value = '';
     });
-    document.querySelectorAll('.counter').forEach(c => {
+    photosInput.value = '';
+    photosCounter.textContent = `0 / ${MAX_PHOTOS} fotos selecionadas`;
+    fileboxText.textContent = 'Escolher fotos';
+    document.querySelectorAll('.counter[data-for]').forEach(c => {
       c.textContent = '0 / 1000';
       c.classList.remove('near');
     });

@@ -31,11 +31,9 @@ function buildMessage(project, pricing) {
   if (project.sobreNegocio) {
     linhas.push('', `*Negócio:* ${escapeMarkdown(project.sobreNegocio)}`);
   }
-
   if (project.objetivoPagina) {
     linhas.push('', `*Objetivo:* ${escapeMarkdown(project.objetivoPagina)}`);
   }
-
   if (project.referencias) {
     linhas.push('', `*Referências:* ${escapeMarkdown(project.referencias)}`);
   }
@@ -51,7 +49,40 @@ function buildMessage(project, pricing) {
   return linhas.join('\n');
 }
 
-async function notifyNewBriefing(project, pricing) {
+// Envia até 10 fotos como álbum. Usa multipart/form-data com attach:// —
+// o fetch nativo do Node monta o boundary sozinho quando o body é um FormData.
+async function sendMediaGroup(chatId, token, photos) {
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+
+  const media = photos.map((_file, index) => ({
+    type: 'photo',
+    media: `attach://photo${index}`,
+  }));
+  media[0].caption = '📋 Novo briefing com fotos em anexo';
+
+  formData.append('media', JSON.stringify(media));
+
+  photos.forEach((file, index) => {
+    const blob = new Blob([file.buffer], { type: file.mimetype });
+    formData.append(`photo${index}`, blob, file.originalname || `foto${index}.jpg`);
+  });
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMediaGroup`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error('Telegram (sendMediaGroup) respondeu com erro:', res.status, body);
+    return { sent: false, reason: 'api_error' };
+  }
+
+  return { sent: true };
+}
+
+async function notifyNewBriefing(project, pricing, photos = []) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
@@ -61,6 +92,10 @@ async function notifyNewBriefing(project, pricing) {
   }
 
   try {
+    if (photos && photos.length > 0) {
+      await sendMediaGroup(chatId, token, photos);
+    }
+
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
