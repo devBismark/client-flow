@@ -34,8 +34,17 @@ const briefingAnswers = typeof req.body.briefingAnswers === 'string'
 
     res.status(201).json({ data: project });
 
-  saveClientPhotos(project, req.files);
-  notifyNewBriefing(project, getPricing(suggestedTier), req.files);
+  (async () => {
+  try {
+    console.log('DEBUG req.files.length:', req.files ? req.files.length : 'undefined');
+    const { urls: photoUrls } = await saveClientPhotos(project, req.files);
+    console.log('DEBUG photoUrls:', photoUrls);
+    const result = await notifyNewBriefing(project, getPricing(suggestedTier), req.files, photoUrls);
+    console.log('DEBUG notifyNewBriefing result:', result);
+  } catch (err) {
+    console.error('Falha ao processar fotos/notificação:', err.message);
+  }
+})();
   } catch (error) {
     next(error);
   }

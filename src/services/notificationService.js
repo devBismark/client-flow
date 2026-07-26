@@ -82,7 +82,7 @@ async function sendMediaGroup(chatId, token, photos) {
   return { sent: true };
 }
 
-async function notifyNewBriefing(project, pricing, photos = []) {
+async function notifyNewBriefing(project, pricing, photos = [], photoUrls = []) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
@@ -110,6 +110,18 @@ async function notifyNewBriefing(project, pricing, photos = []) {
       const body = await res.text();
       console.error('Telegram respondeu com erro:', res.status, body);
       return { sent: false, reason: 'api_error' };
+    }
+
+    if (photoUrls && photoUrls.length > 0) {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `Links permanentes das fotos:\n${photoUrls.join('\n')}`,
+          disable_web_page_preview: true,
+        }),
+      });
     }
 
     return { sent: true };
