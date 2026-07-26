@@ -6,6 +6,7 @@ const { Project, STATUSES, TIERS } = require('../models/Project');
 const { notifyNewBriefing } = require('../services/notificationService');
 const { saveClientPhotos } = require('../services/assetStorage');
 const router = express.Router();
+const { ZipArchive } = require('archiver');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -196,6 +197,34 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
     }
 
     res.json({ data: project });
+  } catch (error) {
+    next(error);
+  }
+});
+  // GET /api/projects/:id/download-photos — baixa todas as fotos em um zip
+router.get('/:id/download-photos', requireAdminKey, async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) {
+      return res.status(404).json({ error: { message: 'Projeto não encontrado' } });
+    }
+    if (!project.photoUrls || project.photoUrls.length === 0) {
+      return res.status(404).json({ error: { message: 'Este projeto não tem fotos' } });
+    }
+
+    res.attachment(`fotos-${project.clientName}.zip`);
+    const archive = new ZipArchive();
+    archive.pipe(res);
+
+    for (let i = 0; i < project.photoUrls.length; i++) {
+      const url = project.photoUrls[i];
+      const response = await fetch(url);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const ext = url.split('.').pop().split('?')[0];
+      archive.append(buffer, { name: `foto-${String(i + 1).padStart(2, '0')}.${ext}` });
+    }
+
+    await archive.finalize();
   } catch (error) {
     next(error);
   }

@@ -48,6 +48,9 @@ async function saveClientPhotos(project, files) {
 
   saveLocalCopy(files, slug);
 
+  project.photoUrls = urls;
+  await project.save();
+
   return { saved: urls.length, urls };
 }
 

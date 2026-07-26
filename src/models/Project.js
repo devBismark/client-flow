@@ -83,6 +83,10 @@ const projectSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    photoUrls: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );
