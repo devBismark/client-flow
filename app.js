@@ -1,14 +1,38 @@
 const path = require('path');
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const projectRoutes = require('./src/routes/projectRoutes');
 const { notFound, errorHandler } = require('./src/middlewares/errorHandler');
+const { requireAdminSession, timingSafeEqual } = require('./src/middlewares/auth');
 
 const app = express();
-
 app.use(express.json());
-const { requireAdminBasicAuth } = require('./src/middlewares/auth');
+app.use(cookieParser(process.env.ADMIN_KEY));
 
-app.get('/admin.html', requireAdminBasicAuth, (req, res) => {
+app.post('/api/login', (req, res) => {
+  const expected = process.env.ADMIN_KEY;
+  const { senha } = req.body;
+
+  if (!expected || !senha || !timingSafeEqual(senha, expected)) {
+    return res.status(401).json({ error: { message: 'Senha incorreta' } });
+  }
+
+  res.cookie('session', 'ok', {
+    httpOnly: true,
+    signed: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+  });
+  res.json({ ok: true });
+});
+
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('session');
+  res.json({ ok: true });
+});
+
+app.get('/admin.html', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
@@ -19,7 +43,6 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/projects', projectRoutes);
-
 app.use(notFound);
 app.use(errorHandler);
 

@@ -9,19 +9,21 @@ function timingSafeEqual(a, b) {
 
 function requireAdminKey(req, res, next) {
   const expected = process.env.ADMIN_KEY;
-
   if (!expected) {
     return res.status(500).json({ error: { message: 'Servidor mal configurado' } });
   }
 
-  const provided = req.get('x-admin-key');
+  if (req.signedCookies.session === 'ok') {
+    return next();
+  }
 
+  const provided = req.get('x-admin-key');
   if (!provided || !timingSafeEqual(provided, expected)) {
     return res.status(401).json({ error: { message: 'Não autorizado' } });
   }
-
   next();
 }
+
 
   function requireAdminBasicAuth(req, res, next) {
   const expected = process.env.ADMIN_KEY;
@@ -43,4 +45,12 @@ function requireAdminKey(req, res, next) {
   next();
 }
 
-module.exports = { requireAdminKey, requireAdminBasicAuth };
+function requireAdminSession(req, res, next) {
+  const expected = process.env.ADMIN_KEY;
+  if (expected && req.signedCookies.session === 'ok') {
+    return next();
+  }
+  return res.redirect('/login.html');
+}
+
+module.exports = { requireAdminKey, requireAdminBasicAuth, requireAdminSession, timingSafeEqual };
