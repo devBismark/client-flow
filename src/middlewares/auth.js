@@ -23,4 +23,24 @@ function requireAdminKey(req, res, next) {
   next();
 }
 
-module.exports = { requireAdminKey };
+  function requireAdminBasicAuth(req, res, next) {
+  const expected = process.env.ADMIN_KEY;
+  const header = req.get('authorization');
+
+  if (!header || !header.startsWith('Basic ')) {
+    res.set('WWW-Authenticate', 'Basic realm="Painel"');
+    return res.status(401).send('Autenticação necessária');
+  }
+
+  const decoded = Buffer.from(header.slice(6), 'base64').toString();
+  const password = decoded.split(':')[1] || '';
+
+  if (!expected || !timingSafeEqual(password, expected)) {
+    res.set('WWW-Authenticate', 'Basic realm="Painel"');
+    return res.status(401).send('Credenciais inválidas');
+  }
+
+  next();
+}
+
+module.exports = { requireAdminKey, requireAdminBasicAuth };
