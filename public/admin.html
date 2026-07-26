@@ -565,8 +565,9 @@ function render(projetos) {
         </div>
 
         <div class="link-row">
-          <button class="btn-link copy-link" data-token="${p.proposalToken}">Copiar link</button>
+          <button class="btn-link copy-link" data-token="${p.proposalToken}">Copiarlink</button>
           <a class="btn-link" href="/proposta.html?t=${p.proposalToken}" target="_blank" rel="noopener">Ver proposta</a>
+          ${p.photoUrls && p.photoUrls.length ? `<button class="btn-link download-photos">Baixar fotos (${p.photoUrls.length})</button>` : ''}
         </div>
 
         <div class="ctrl-label">Pacote final</div>
@@ -613,11 +614,6 @@ function bindEvents() {
   document.querySelectorAll('.card').forEach(card => {
     const id = card.dataset.id;
 
-    card.querySelector('.status').addEventListener('change', async (e) => {
-      await patch(`/api/projects/${id}/status`, { status: e.target.value });
-      carregar();
-    });
-
     card.querySelector('.save').addEventListener('click', async (e) => {
       const finalTier = card.querySelector('.tier-select').value || null;
       const notes = card.querySelector('.notes').value;
@@ -629,6 +625,34 @@ function bindEvents() {
       btn.textContent = 'Guardado';
       setTimeout(carregar, 700);
     });
+
+    const downloadBtn = card.querySelector('.download-photos');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', async () => {
+        const original = downloadBtn.textContent;
+        downloadBtn.textContent = 'A baixar...';
+        try {
+          const res = await fetch(`/api/projects/${id}/download-photos`, {
+            headers: { 'x-admin-key': adminKey() }
+          });
+          if (!res.ok) throw new Error('Falha ao baixar fotos');
+
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `fotos-${id}.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          downloadBtn.textContent = original;
+        }
+      });
+    }
   });
 }
 
