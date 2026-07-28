@@ -15,7 +15,7 @@ const ANSWER_LABEL = {
 };
 
 function escapeMarkdown(text) {
-  return String(text).replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
+  return String(text).replace(/([_*[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
 }
 
 function buildMessage(project, pricing) {
