@@ -5,6 +5,10 @@ const projectRoutes = require('./src/routes/projectRoutes');
 const diagnosticRoutes = require('./src/routes/diagnosticRoutes');
 const { notFound, errorHandler } = require('./src/middlewares/errorHandler');
 const { requireAdminSession, timingSafeEqual } = require('./src/middlewares/auth');
+const { createRateLimiter } = require('./src/middlewares/rateLimiter');
+
+const projectsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 });
+const diagnosticsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 });
 
 const app = express();
 app.use(express.json());
@@ -47,8 +51,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/projects', projectRoutes);
-app.use('/api/diagnostics', diagnosticRoutes);
+app.use('/api/projects', projectsRateLimiter, projectRoutes);
+app.use('/api/diagnostics', diagnosticsRateLimiter, diagnosticRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
