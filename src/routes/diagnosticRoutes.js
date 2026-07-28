@@ -222,6 +222,33 @@ router.patch('/:id/priority', diagnosticsAdminLimiter, requireAdminKey, async (r
   }
 });
 
+// PATCH /api/diagnostics/:id/proposal-draft — admin, atualiza rascunho interno de proposta
+router.patch('/:id/proposal-draft', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
+  try {
+    const { propostaRascunho } = req.body;
+
+    const lead = await DiagnosticLead.findByIdAndUpdate(
+      req.params.id,
+      { propostaRascunho },
+      { returnDocument: 'after', runValidators: true }
+    );
+
+    if (!lead) {
+      return res.status(404).json({ error: { message: 'Lead não encontrado' } });
+    }
+
+    logAudit('diagnostic_lead_proposal_draft_updated', {
+      leadId: String(lead._id),
+      draftLength: lead.propostaRascunho ? lead.propostaRascunho.length : 0,
+      ip: maskIp(req.ip),
+    });
+
+    res.json({ data: lead });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // DELETE /api/diagnostics/:id — admin, remove
 router.delete('/:id', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {

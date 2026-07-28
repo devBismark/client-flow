@@ -57,6 +57,12 @@ describe('POST /api/diagnostics', () => {
     expect(res.body.data.origem).toBe('diagnostico');
   });
 
+  test('propostaRascunho default é string vazia', async () => {
+    const res = await request(app).post('/api/diagnostics').send(payloadBase());
+    expect(res.status).toBe(201);
+    expect(res.body.data.propostaRascunho).toBe('');
+  });
+
   test('não exige admin key (rota pública)', async () => {
     const res = await request(app).post('/api/diagnostics').send(payloadBase());
     expect(res.status).toBe(201);
@@ -515,6 +521,71 @@ describe('PATCH /api/diagnostics/:id/priority', () => {
     expect(logged).toContain('diagnostic_lead_priority_updated');
     expect(logged).toContain('"from":"media"');
     expect(logged).toContain('"to":"alta"');
+
+    spy.mockRestore();
+  });
+});
+
+describe('PATCH /api/diagnostics/:id/proposal-draft', () => {
+  test('401 sem admin key', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/proposal-draft`)
+      .send({ propostaRascunho: 'Rascunho de teste' });
+    expect(res.status).toBe(401);
+  });
+
+  test('200 com rascunho válido e altera propostaRascunho', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/proposal-draft`)
+      .set(AUTH)
+      .send({ propostaRascunho: 'Escopo: site institucional com 5 páginas. Faixa: 300-400€, a confirmar.' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.propostaRascunho).toBe(
+      'Escopo: site institucional com 5 páginas. Faixa: 300-400€, a confirmar.'
+    );
+
+    const get = await request(app).get(`/api/diagnostics/${lead._id}`).set(AUTH);
+    expect(get.body.data.propostaRascunho).toBe(
+      'Escopo: site institucional com 5 páginas. Faixa: 300-400€, a confirmar.'
+    );
+  });
+
+  test('400 para rascunho maior que 5000 caracteres', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/proposal-draft`)
+      .set(AUTH)
+      .send({ propostaRascunho: 'a'.repeat(5001) });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('404 para id inexistente', async () => {
+    const res = await request(app)
+      .patch('/api/diagnostics/000000000000000000000000/proposal-draft')
+      .set(AUTH)
+      .send({ propostaRascunho: 'qualquer coisa' });
+
+    expect(res.status).toBe(404);
+  });
+
+  test('log de auditoria não contém o texto da proposta', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const lead = await criarLead();
+
+    await request(app)
+      .patch(`/api/diagnostics/${lead._id}/proposal-draft`)
+      .set(AUTH)
+      .send({ propostaRascunho: 'TEXTO_SIGILOSO_DA_PROPOSTA_QUE_NAO_PODE_VAZAR' });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const logged = spy.mock.calls[0][0];
+    expect(logged).toContain('[audit]');
+    expect(logged).toContain('diagnostic_lead_proposal_draft_updated');
+    expect(logged).not.toContain('TEXTO_SIGILOSO_DA_PROPOSTA_QUE_NAO_PODE_VAZAR');
 
     spy.mockRestore();
   });

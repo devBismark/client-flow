@@ -288,6 +288,49 @@
   }
   .btn-salvar-prioridade:hover { border-color: var(--steel-2); }
   .btn-salvar-prioridade.saved { color: var(--text); border-color: var(--steel-2); }
+
+  .proposta-status-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    border: 1px solid var(--hairline);
+    border-radius: 1px;
+    padding: 4px 10px;
+    margin-bottom: 8px;
+  }
+  .proposta-status-tag.rascunho { color: var(--gold, var(--steel-2)); border-color: rgba(200,162,92,0.5); }
+  .proposta-textarea {
+    width: 100%;
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px;
+    resize: vertical;
+    min-height: 80px;
+    margin-bottom: 8px;
+  }
+  .btn-salvar-proposta {
+    width: 100%;
+    background: transparent;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+  .btn-salvar-proposta:hover { border-color: var(--steel-2); }
+  .btn-salvar-proposta.saved { color: var(--text); border-color: var(--steel-2); }
   .empty {
     color: var(--muted);
     text-align: center;
@@ -497,6 +540,10 @@ function render(leads, meta) {
       `<option value="${p}" ${p === prioridade ? 'selected' : ''}>${escapeHtml(PRIORITY_LABELS[p] || p)}</option>`
     ).join('');
 
+    const temRascunho = !!(lead.propostaRascunho && lead.propostaRascunho.trim());
+    const propostaStatusLabel = temRascunho ? 'Rascunho interno' : 'Sem rascunho';
+    const propostaStatusClass = temRascunho ? 'rascunho' : '';
+
     return `
       <div class="card" data-id="${lead._id}">
         <h3>${escapeHtml(lead.nomeEmpresa)}</h3>
@@ -538,6 +585,11 @@ function render(leads, meta) {
         <div class="field-label">Nota interna</div>
         <textarea class="nota-textarea" data-id="${lead._id}">${escapeHtml(lead.notaInterna)}</textarea>
         <button class="btn-salvar-nota" data-id="${lead._id}">Salvar nota</button>
+
+        <div class="field-label">Rascunho de proposta</div>
+        <div class="proposta-status-tag ${propostaStatusClass}">${propostaStatusLabel}</div>
+        <textarea class="proposta-textarea" data-id="${lead._id}">${escapeHtml(lead.propostaRascunho)}</textarea>
+        <button class="btn-salvar-proposta" data-id="${lead._id}">Salvar rascunho</button>
 
         <button class="btn-remover" data-id="${lead._id}">Remover</button>
       </div>
@@ -629,6 +681,38 @@ function bindEvents() {
         setTimeout(() => {
           btn.classList.remove('saved');
           btn.textContent = 'Salvar nota';
+        }, 1600);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-salvar-proposta').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const card = btn.closest('.card');
+      const textarea = card.querySelector('.proposta-textarea');
+      const novoRascunho = textarea.value;
+
+      try {
+        const res = await fetch(`/api/diagnostics/${id}/proposal-draft`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ propostaRascunho: novoRascunho }),
+        });
+        if (!res.ok) throw new Error('Falha ao salvar rascunho.');
+
+        const statusTag = card.querySelector('.proposta-status-tag');
+        const temRascunho = !!novoRascunho.trim();
+        statusTag.textContent = temRascunho ? 'Rascunho interno' : 'Sem rascunho';
+        statusTag.className = `proposta-status-tag ${temRascunho ? 'rascunho' : ''}`;
+
+        btn.classList.add('saved');
+        btn.textContent = 'Salvo';
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.textContent = 'Salvar rascunho';
         }, 1600);
       } catch (err) {
         alert(err.message);

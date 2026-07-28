@@ -87,6 +87,12 @@ const diagnosticLeadSchema = new mongoose.Schema(
       enum: ORIGINS,
       default: 'diagnostico',
     },
+    propostaRascunho: {
+      type: String,
+      trim: true,
+      maxlength: 5000,
+      default: '',
+    },
   },
   { timestamps: true }
 );
