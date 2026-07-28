@@ -11,6 +11,15 @@ const diagnosticsAdminLimiter = createRateLimiter({
   methods: ['GET', 'DELETE'],
 });
 
+function maskIp(ip) {
+  if (!ip) return null;
+  return ip.replace(/\.\d+$/, '.xxx');
+}
+
+function logAudit(event, data) {
+  console.info(`[audit] ${JSON.stringify({ event, ...data, at: new Date().toISOString() })}`);
+}
+
 // POST /api/diagnostics — público (triagem geral do /diagnostico)
 router.post('/', async (req, res, next) => {
   try {
@@ -86,6 +95,14 @@ router.delete('/:id', diagnosticsAdminLimiter, requireAdminKey, async (req, res,
     if (!lead) {
       return res.status(404).json({ error: { message: 'Lead não encontrado' } });
     }
+
+    logAudit('diagnostic_lead_deleted', {
+      leadId: String(lead._id),
+      categorias: lead.categorias,
+      createdAt: lead.createdAt,
+      ip: maskIp(req.ip),
+    });
+
     res.json({ data: { _id: lead._id } });
   } catch (error) {
     next(error);

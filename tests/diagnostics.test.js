@@ -237,6 +237,49 @@ describe('DELETE /api/diagnostics/:id', () => {
       .set(AUTH);
     expect(res.status).toBe(404);
   });
+
+  test('registra log de auditoria ao remover um lead existente', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const lead = await criarLead();
+
+    await request(app).delete(`/api/diagnostics/${lead._id}`).set(AUTH);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const logged = spy.mock.calls[0][0];
+    expect(logged).toContain('[audit]');
+    expect(logged).toContain('diagnostic_lead_deleted');
+    expect(logged).toContain(lead._id);
+
+    spy.mockRestore();
+  });
+
+  test('log de remoção não contém contato nem descricaoBreve', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const lead = await criarLead({
+      contato: 'segredo@naopodeaparecer.com',
+      descricaoBreve: 'TEXTO_QUE_NAO_PODE_VAZAR_NO_LOG',
+    });
+
+    await request(app).delete(`/api/diagnostics/${lead._id}`).set(AUTH);
+
+    const logged = spy.mock.calls[0][0];
+    expect(logged).not.toContain('segredo@naopodeaparecer.com');
+    expect(logged).not.toContain('TEXTO_QUE_NAO_PODE_VAZAR_NO_LOG');
+
+    spy.mockRestore();
+  });
+
+  test('não loga nada quando o id não existe (404)', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+
+    await request(app)
+      .delete('/api/diagnostics/000000000000000000000000')
+      .set(AUTH);
+
+    expect(spy).not.toHaveBeenCalled();
+
+    spy.mockRestore();
+  });
 });
 
 describe('notifyNewDiagnostic — sem Telegram real nesta etapa', () => {
