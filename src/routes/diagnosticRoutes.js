@@ -13,7 +13,21 @@ const diagnosticsAdminLimiter = createRateLimiter({
 
 function maskIp(ip) {
   if (!ip) return null;
-  return ip.replace(/\.\d+$/, '.xxx');
+
+  const ipv4Mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+)\.\d+$/i);
+  if (ipv4Mapped) {
+    return `::ffff:${ipv4Mapped[1]}.xxx`;
+  }
+
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+    return ip.replace(/\.\d+$/, '.xxx');
+  }
+
+  if (ip.includes(':')) {
+    return '[ipv6-masked]';
+  }
+
+  return '[ip-masked]';
 }
 
 function logAudit(event, data) {
@@ -108,5 +122,7 @@ router.delete('/:id', diagnosticsAdminLimiter, requireAdminKey, async (req, res,
     next(error);
   }
 });
+
+router.maskIp = maskIp;
 
 module.exports = router;

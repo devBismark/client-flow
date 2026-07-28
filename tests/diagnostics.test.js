@@ -5,6 +5,7 @@ require('./setup');
 const request = require('supertest');
 const app = require('../app');
 const { notifyNewDiagnostic } = require('../src/services/notificationService');
+const { maskIp } = require('../src/routes/diagnosticRoutes');
 
 const AUTH = { 'x-admin-key': 'test-key' };
 
@@ -279,6 +280,28 @@ describe('DELETE /api/diagnostics/:id', () => {
     expect(spy).not.toHaveBeenCalled();
 
     spy.mockRestore();
+  });
+});
+
+describe('maskIp (auditoria)', () => {
+  test('mascara IPv4 normal', () => {
+    expect(maskIp('203.0.113.42')).toBe('203.0.113.xxx');
+  });
+
+  test('mascara IPv4 mapeado em IPv6', () => {
+    expect(maskIp('::ffff:127.0.0.1')).toBe('::ffff:127.0.0.xxx');
+  });
+
+  test('IPv6 genérico não retorna o endereço completo', () => {
+    const original = '2001:db8::1';
+    const masked = maskIp(original);
+    expect(masked).not.toBe(original);
+    expect(masked).not.toContain(original);
+  });
+
+  test('retorna null para vazio/null', () => {
+    expect(maskIp(null)).toBeNull();
+    expect(maskIp('')).toBeNull();
   });
 });
 
