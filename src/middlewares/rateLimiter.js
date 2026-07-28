@@ -1,9 +1,10 @@
-function createRateLimiter({ windowMs = 10 * 60 * 1000, max = 10 } = {}) {
+function createRateLimiter({ windowMs = 10 * 60 * 1000, max = 10, methods = ['POST'] } = {}) {
   const hits = new Map();
+  const methodSet = methods ? new Set(methods) : null;
 
   return function rateLimiter(req, res, next) {
     if (process.env.NODE_ENV === 'test') return next();
-    if (req.method !== 'POST') return next();
+    if (methodSet && !methodSet.has(req.method)) return next();
 
     const key = req.ip;
     const now = Date.now();

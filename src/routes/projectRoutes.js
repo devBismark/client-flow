@@ -5,8 +5,15 @@ const { requireAdminKey } = require('../middlewares/auth');
 const { Project, STATUSES, TIERS } = require('../models/Project');
 const { notifyNewBriefing } = require('../services/notificationService');
 const { saveClientPhotos } = require('../services/assetStorage');
+const { createRateLimiter } = require('../middlewares/rateLimiter');
 const router = express.Router();
 const { ZipArchive } = require('archiver');
+
+const projectsAdminLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  methods: ['GET', 'PATCH'],
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -52,7 +59,7 @@ const briefingAnswers = typeof req.body.briefingAnswers === 'string'
 });
 
 // GET /api/projects — lista com paginação
-router.get('/', requireAdminKey, async (req, res, next) => {
+router.get('/', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
@@ -99,7 +106,7 @@ router.get('/public/:token', async (req, res, next) => {
 });
 
 // GET /api/projects/:id
-router.get('/:id', requireAdminKey, async (req, res, next) => {
+router.get('/:id', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) {
@@ -112,7 +119,7 @@ router.get('/:id', requireAdminKey, async (req, res, next) => {
 });
 
 // PATCH /api/projects/:id/status
-router.patch('/:id/status', requireAdminKey, async (req, res, next) => {
+router.patch('/:id/status', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const { status } = req.body;
 
@@ -139,7 +146,7 @@ router.patch('/:id/status', requireAdminKey, async (req, res, next) => {
 });
 
 // GET /api/projects/:id/proposal
-router.get('/:id/proposal', requireAdminKey, async (req, res, next) => {
+router.get('/:id/proposal', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) {
@@ -165,7 +172,7 @@ router.get('/:id/proposal', requireAdminKey, async (req, res, next) => {
 });
 
 // PATCH /api/projects/:id — atualiza tier final e notas
-router.patch('/:id', requireAdminKey, async (req, res, next) => {
+router.patch('/:id', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const { finalTier, notes } = req.body;
     const updates = {};
@@ -202,7 +209,7 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
   }
 });
   // GET /api/projects/:id/download-photos — baixa todas as fotos em um zip
-router.get('/:id/download-photos', requireAdminKey, async (req, res, next) => {
+router.get('/:id/download-photos', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) {

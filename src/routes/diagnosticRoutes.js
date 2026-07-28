@@ -2,7 +2,14 @@ const express = require('express');
 const { DiagnosticLead } = require('../models/DiagnosticLead');
 const { notifyNewDiagnostic } = require('../services/notificationService');
 const { requireAdminKey } = require('../middlewares/auth');
+const { createRateLimiter } = require('../middlewares/rateLimiter');
 const router = express.Router();
+
+const diagnosticsAdminLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  methods: ['GET', 'DELETE'],
+});
 
 // POST /api/diagnostics — público (triagem geral do /diagnostico)
 router.post('/', async (req, res, next) => {
@@ -43,7 +50,7 @@ router.post('/', async (req, res, next) => {
 });
 
 // GET /api/diagnostics — admin, lista paginada
-router.get('/', requireAdminKey, async (req, res, next) => {
+router.get('/', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
@@ -60,7 +67,7 @@ router.get('/', requireAdminKey, async (req, res, next) => {
 });
 
 // GET /api/diagnostics/:id — admin, detalhe
-router.get('/:id', requireAdminKey, async (req, res, next) => {
+router.get('/:id', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const lead = await DiagnosticLead.findById(req.params.id);
     if (!lead) {
@@ -73,7 +80,7 @@ router.get('/:id', requireAdminKey, async (req, res, next) => {
 });
 
 // DELETE /api/diagnostics/:id — admin, remove
-router.delete('/:id', requireAdminKey, async (req, res, next) => {
+router.delete('/:id', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
     const lead = await DiagnosticLead.findByIdAndDelete(req.params.id);
     if (!lead) {

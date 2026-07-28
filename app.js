@@ -9,12 +9,13 @@ const { createRateLimiter } = require('./src/middlewares/rateLimiter');
 
 const projectsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 });
 const diagnosticsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 });
+const loginRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser(process.env.ADMIN_KEY));
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', loginRateLimiter, (req, res) => {
   const expected = process.env.ADMIN_KEY;
   const { senha } = req.body;
 
