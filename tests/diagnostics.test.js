@@ -39,6 +39,12 @@ describe('POST /api/diagnostics', () => {
     expect(res.body.data.status).toBe('novo');
   });
 
+  test('notaInterna default é string vazia', async () => {
+    const res = await request(app).post('/api/diagnostics').send(payloadBase());
+    expect(res.status).toBe(201);
+    expect(res.body.data.notaInterna).toBe('');
+  });
+
   test('não exige admin key (rota pública)', async () => {
     const res = await request(app).post('/api/diagnostics').send(payloadBase());
     expect(res.status).toBe(201);
@@ -329,6 +335,67 @@ describe('PATCH /api/diagnostics/:id/status', () => {
       .send({ status: 'ganho' });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/diagnostics/:id/note', () => {
+  test('401 sem admin key', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/note`)
+      .send({ notaInterna: 'Nota de teste' });
+    expect(res.status).toBe(401);
+  });
+
+  test('200 com nota válida e altera notaInterna', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/note`)
+      .set(AUTH)
+      .send({ notaInterna: 'Cliente pediu retorno na próxima semana.' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.notaInterna).toBe('Cliente pediu retorno na próxima semana.');
+
+    const get = await request(app).get(`/api/diagnostics/${lead._id}`).set(AUTH);
+    expect(get.body.data.notaInterna).toBe('Cliente pediu retorno na próxima semana.');
+  });
+
+  test('400 para nota maior que 2000 caracteres', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/note`)
+      .set(AUTH)
+      .send({ notaInterna: 'a'.repeat(2001) });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('404 para id inexistente', async () => {
+    const res = await request(app)
+      .patch('/api/diagnostics/000000000000000000000000/note')
+      .set(AUTH)
+      .send({ notaInterna: 'qualquer coisa' });
+
+    expect(res.status).toBe(404);
+  });
+
+  test('log de auditoria não contém o texto da nota', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const lead = await criarLead();
+
+    await request(app)
+      .patch(`/api/diagnostics/${lead._id}/note`)
+      .set(AUTH)
+      .send({ notaInterna: 'TEXTO_SIGILOSO_QUE_NAO_PODE_VAZAR' });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const logged = spy.mock.calls[0][0];
+    expect(logged).toContain('[audit]');
+    expect(logged).toContain('diagnostic_lead_note_updated');
+    expect(logged).not.toContain('TEXTO_SIGILOSO_QUE_NAO_PODE_VAZAR');
+
+    spy.mockRestore();
   });
 });
 

@@ -212,6 +212,36 @@
   }
   .btn-salvar-status:hover { border-color: var(--steel-2); }
   .btn-salvar-status.saved { color: var(--text); border-color: var(--steel-2); }
+  .nota-textarea {
+    width: 100%;
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px;
+    resize: vertical;
+    min-height: 56px;
+    margin-bottom: 8px;
+  }
+  .btn-salvar-nota {
+    width: 100%;
+    background: transparent;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+  .btn-salvar-nota:hover { border-color: var(--steel-2); }
+  .btn-salvar-nota.saved { color: var(--text); border-color: var(--steel-2); }
   .empty {
     color: var(--muted);
     text-align: center;
@@ -420,6 +450,10 @@ function render(leads, meta) {
           <button class="btn-salvar-status" data-id="${lead._id}">Salvar status</button>
         </div>
 
+        <div class="field-label">Nota interna</div>
+        <textarea class="nota-textarea" data-id="${lead._id}">${escapeHtml(lead.notaInterna)}</textarea>
+        <button class="btn-salvar-nota" data-id="${lead._id}">Salvar nota</button>
+
         <button class="btn-remover" data-id="${lead._id}">Remover</button>
       </div>
     `;
@@ -452,6 +486,33 @@ function bindEvents() {
         setTimeout(() => {
           btn.classList.remove('saved');
           btn.textContent = 'Salvar status';
+        }, 1600);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-salvar-nota').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const card = btn.closest('.card');
+      const textarea = card.querySelector('.nota-textarea');
+      const novaNota = textarea.value;
+
+      try {
+        const res = await fetch(`/api/diagnostics/${id}/note`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notaInterna: novaNota }),
+        });
+        if (!res.ok) throw new Error('Falha ao salvar nota.');
+
+        btn.classList.add('saved');
+        btn.textContent = 'Salvo';
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.textContent = 'Salvar nota';
         }, 1600);
       } catch (err) {
         alert(err.message);

@@ -69,6 +69,12 @@ const diagnosticLeadSchema = new mongoose.Schema(
       enum: STATUSES,
       default: 'novo',
     },
+    notaInterna: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: '',
+    },
   },
   { timestamps: true }
 );

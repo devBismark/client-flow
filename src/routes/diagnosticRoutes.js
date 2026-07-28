@@ -151,6 +151,33 @@ router.patch('/:id/status', diagnosticsAdminLimiter, requireAdminKey, async (req
   }
 });
 
+// PATCH /api/diagnostics/:id/note — admin, atualiza nota interna
+router.patch('/:id/note', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
+  try {
+    const { notaInterna } = req.body;
+
+    const lead = await DiagnosticLead.findByIdAndUpdate(
+      req.params.id,
+      { notaInterna },
+      { returnDocument: 'after', runValidators: true }
+    );
+
+    if (!lead) {
+      return res.status(404).json({ error: { message: 'Lead não encontrado' } });
+    }
+
+    logAudit('diagnostic_lead_note_updated', {
+      leadId: String(lead._id),
+      noteLength: lead.notaInterna ? lead.notaInterna.length : 0,
+      ip: maskIp(req.ip),
+    });
+
+    res.json({ data: lead });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // DELETE /api/diagnostics/:id — admin, remove
 router.delete('/:id', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
   try {
