@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const projectRoutes = require('./src/routes/projectRoutes');
+const diagnosticRoutes = require('./src/routes/diagnosticRoutes');
 const { notFound, errorHandler } = require('./src/middlewares/errorHandler');
 const { requireAdminSession, timingSafeEqual } = require('./src/middlewares/auth');
 
@@ -36,6 +37,10 @@ app.get('/admin.html', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+app.get('/diagnostico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'diagnostico.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/health', (req, res) => {
@@ -43,6 +48,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/projects', projectRoutes);
+app.use('/api/diagnostics', diagnosticRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

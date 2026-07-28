@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Diagnóstico — IDISTØPIC</title>
+<style>
+  :root {
+    --bg: #05090b;
+    --panel: #091014;
+    --border: #263238;
+    --text: #f5f7f8;
+    --text-soft: #aeb8bd;
+    --cyan: #00f0ff;
+    --green: #39ff14;
+    --orange: #ff8a00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.5;
+    padding: 2rem 1rem 4rem;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    margin-bottom: 0.5rem;
+  }
+  p.lead {
+    color: var(--text-soft);
+    margin-top: 0;
+    margin-bottom: 2rem;
+  }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem 1.25rem;
+    margin: 0 0 1.25rem;
+  }
+  legend {
+    padding: 0 0.4rem;
+    color: var(--text-soft);
+    font-size: 0.9rem;
+  }
+  label.field {
+    display: block;
+    margin-bottom: 1.25rem;
+  }
+  label.field span {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.9rem;
+    color: var(--text-soft);
+  }
+  input[type="text"],
+  textarea {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 0.6rem 0.75rem;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 5rem; }
+  .categoria-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+  .categoria-item input { margin-top: 0.2rem; }
+  button[type="submit"] {
+    background: var(--cyan);
+    color: #05090b;
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button[type="submit"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  #redirect-aviso,
+  #sucesso-aviso,
+  #erro-aviso {
+    display: none;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  #redirect-aviso {
+    border: 1px solid var(--orange);
+    background: rgba(255, 138, 0, 0.08);
+  }
+  #sucesso-aviso {
+    border: 1px solid var(--green);
+    background: rgba(57, 255, 20, 0.08);
+  }
+  #erro-aviso {
+    border: 1px solid #ff4d4f;
+    background: rgba(255, 77, 79, 0.08);
+  }
+  #redirect-aviso a {
+    color: var(--cyan);
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Diagnóstico rápido</h1>
+  <p class="lead">Conte em poucas palavras o que você precisa — a IDISTØPIC entra em contacto para entender melhor e indicar o próximo passo.</p>
+
+  <div id="redirect-aviso" role="status">
+    Essa frente (sites e landing pages) já tem um briefing próprio, mais detalhado.
+    <a href="/">Ir para o briefing de sites e landing pages</a>
+  </div>
+
+  <div id="sucesso-aviso" role="status">
+    Recebido! Vamos analisar e entrar em contacto em breve.
+  </div>
+
+  <div id="erro-aviso" role="alert"></div>
+
+  <form id="form-diagnostico" novalidate>
+    <label class="field">
+      <span>Nome / empresa *</span>
+      <input type="text" name="nomeEmpresa" required maxlength="120" />
+    </label>
+
+    <label class="field">
+      <span>Contacto (e-mail e/ou WhatsApp) *</span>
+      <input type="text" name="contato" required maxlength="200" />
+    </label>
+
+    <fieldset>
+      <legend>O que você precisa? (marque uma ou mais) *</legend>
+      <div class="categoria-item">
+        <input type="checkbox" id="cat-sistemas_agentes_ia" name="categorias" value="sistemas_agentes_ia" />
+        <label for="cat-sistemas_agentes_ia">Sistemas inteligentes e agentes de IA</label>
+      </div>
+      <div class="categoria-item">
+        <input type="checkbox" id="cat-sites_landing_pages" name="categorias" value="sites_landing_pages" />
+        <label for="cat-sites_landing_pages">Sites e landing pages</label>
+      </div>
+      <div class="categoria-item">
+        <input type="checkbox" id="cat-automacoes" name="categorias" value="automacoes" />
+        <label for="cat-automacoes">Automações</label>
+      </div>
+      <div class="categoria-item">
+        <input type="checkbox" id="cat-saas_produtos_digitais" name="categorias" value="saas_produtos_digitais" />
+        <label for="cat-saas_produtos_digitais">SaaS e produtos digitais</label>
+      </div>
+      <div class="categoria-item">
+        <input type="checkbox" id="cat-apis_integracoes" name="categorias" value="apis_integracoes" />
+        <label for="cat-apis_integracoes">APIs e integrações</label>
+      </div>
+      <div class="categoria-item">
+        <input type="checkbox" id="cat-ainda_nao_sei" name="categorias" value="ainda_nao_sei" />
+        <label for="cat-ainda_nao_sei">Ainda não sei</label>
+      </div>
+    </fieldset>
+
+    <label class="field">
+      <span>Descrição breve *</span>
+      <textarea name="descricaoBreve" required maxlength="1000"></textarea>
+    </label>
+
+    <label class="field">
+      <span>Estágio atual (opcional)</span>
+      <input type="text" name="estagioAtual" maxlength="500" />
+    </label>
+
+    <label class="field">
+      <span>Urgência / prazo aproximado (opcional)</span>
+      <input type="text" name="urgencia" maxlength="200" />
+    </label>
+
+    <button type="submit" id="btn-enviar">Enviar</button>
+  </form>
+</main>
+
+<script>
+(function () {
+  const form = document.getElementById('form-diagnostico');
+  const btnEnviar = document.getElementById('btn-enviar');
+  const redirectAviso = document.getElementById('redirect-aviso');
+  const sucessoAviso = document.getElementById('sucesso-aviso');
+  const erroAviso = document.getElementById('erro-aviso');
+
+  function categoriasMarcadas() {
+    return Array.from(form.querySelectorAll('input[name="categorias"]:checked')).map((el) => el.value);
+  }
+
+  function ehSomenteLanding(categorias) {
+    return categorias.length === 1 && categorias[0] === 'sites_landing_pages';
+  }
+
+  function atualizarEstadoRedirect() {
+    const categorias = categoriasMarcadas();
+    if (ehSomenteLanding(categorias)) {
+      redirectAviso.style.display = 'block';
+      btnEnviar.disabled = true;
+    } else {
+      redirectAviso.style.display = 'none';
+      btnEnviar.disabled = false;
+    }
+  }
+
+  form.querySelectorAll('input[name="categorias"]').forEach((el) => {
+    el.addEventListener('change', atualizarEstadoRedirect);
+  });
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    erroAviso.style.display = 'none';
+    sucessoAviso.style.display = 'none';
+
+    const categorias = categoriasMarcadas();
+
+    if (ehSomenteLanding(categorias)) {
+      atualizarEstadoRedirect();
+      return;
+    }
+
+    if (categorias.length === 0) {
+      erroAviso.textContent = 'Selecione ao menos uma opção.';
+      erroAviso.style.display = 'block';
+      return;
+    }
+
+    const payload = {
+      nomeEmpresa: form.nomeEmpresa.value.trim(),
+      contato: form.contato.value.trim(),
+      categorias: categorias,
+      descricaoBreve: form.descricaoBreve.value.trim(),
+      estagioAtual: form.estagioAtual.value.trim(),
+      urgencia: form.urgencia.value.trim(),
+    };
+
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = 'Enviando…';
+
+    try {
+      const res = await fetch('/api/diagnostics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body.redirectTo) {
+          atualizarEstadoRedirect();
+        } else {
+          erroAviso.textContent = (body.error && body.error.message) || 'Não foi possível enviar. Tente novamente.';
+          erroAviso.style.display = 'block';
+        }
+        btnEnviar.disabled = false;
+        btnEnviar.textContent = 'Enviar';
+        return;
+      }
+
+      form.style.display = 'none';
+      sucessoAviso.style.display = 'block';
+    } catch (err) {
+      erroAviso.textContent = 'Falha de conexão. Tente novamente.';
+      erroAviso.style.display = 'block';
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = 'Enviar';
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+const { CATEGORY_LABELS } = require('../models/DiagnosticLead');
+
 const TIER_LABEL = {
   essencial: 'Essencial',
   profissional: 'Profissional',
@@ -131,4 +133,65 @@ async function notifyNewBriefing(project, pricing, photos = [], photoUrls = []) 
   }
 }
 
-module.exports = { notifyNewBriefing, buildMessage };
+// --- Diagnóstico geral (/diagnostico) — aditivo, não altera o fluxo do briefing acima ---
+
+function buildDiagnosticMessage(lead) {
+  const categoriasLabel = (lead.categorias || [])
+    .map((categoria) => CATEGORY_LABELS[categoria] || categoria)
+    .join(', ');
+
+  const linhas = [
+    '*Novo diagnóstico recebido*',
+    '_Origem: /diagnostico — briefing geral_',
+    '',
+    `*Nome/Empresa:* ${escapeMarkdown(lead.nomeEmpresa)}`,
+    `*Contacto:* ${escapeMarkdown(lead.contato)}`,
+    `*Categoria\\(s\\):* ${escapeMarkdown(categoriasLabel)}`,
+    '',
+    `*Descrição:* ${escapeMarkdown(lead.descricaoBreve)}`,
+  ];
+
+  if (lead.estagioAtual) {
+    linhas.push('', `*Estágio atual:* ${escapeMarkdown(lead.estagioAtual)}`);
+  }
+  if (lead.urgencia) {
+    linhas.push('', `*Urgência:* ${escapeMarkdown(lead.urgencia)}`);
+  }
+
+  return linhas.join('\n');
+}
+
+async function notifyNewDiagnostic(lead) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    console.warn('Telegram não configurado — notificação de diagnóstico ignorada');
+    return { sent: false, reason: 'not_configured' };
+  }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: buildDiagnosticMessage(lead),
+        parse_mode: 'MarkdownV2',
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('Telegram (diagnóstico) respondeu com erro:', res.status, body);
+      return { sent: false, reason: 'api_error' };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    console.error('Falha ao notificar diagnóstico via Telegram:', error.message);
+    return { sent: false, reason: 'network_error' };
+  }
+}
+
+module.exports = { notifyNewBriefing, buildMessage, notifyNewDiagnostic, buildDiagnosticMessage };

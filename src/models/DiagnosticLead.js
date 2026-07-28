@@ -1,0 +1,67 @@
+const mongoose = require('mongoose');
+
+const CATEGORIES = [
+  'sistemas_agentes_ia',
+  'sites_landing_pages',
+  'automacoes',
+  'saas_produtos_digitais',
+  'apis_integracoes',
+  'ainda_nao_sei',
+];
+
+const CATEGORY_LABELS = {
+  sistemas_agentes_ia: 'Sistemas inteligentes e agentes de IA',
+  sites_landing_pages: 'Sites e landing pages',
+  automacoes: 'Automações',
+  saas_produtos_digitais: 'SaaS e produtos digitais',
+  apis_integracoes: 'APIs e integrações',
+  ainda_nao_sei: 'Ainda não sei',
+};
+
+const diagnosticLeadSchema = new mongoose.Schema(
+  {
+    nomeEmpresa: {
+      type: String,
+      required: [true, 'Nome ou empresa é obrigatório'],
+      trim: true,
+      maxlength: 120,
+    },
+    contato: {
+      type: String,
+      required: [true, 'Contato é obrigatório'],
+      trim: true,
+      maxlength: 200,
+    },
+    categorias: {
+      type: [{ type: String, enum: CATEGORIES }],
+      required: true,
+      validate: {
+        validator: (value) => Array.isArray(value) && value.length > 0,
+        message: 'Selecione ao menos uma categoria',
+      },
+    },
+    descricaoBreve: {
+      type: String,
+      required: [true, 'Descrição breve é obrigatória'],
+      trim: true,
+      maxlength: 1000,
+    },
+    estagioAtual: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: '',
+    },
+    urgencia: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: '',
+    },
+  },
+  { timestamps: true }
+);
+
+const DiagnosticLead = mongoose.model('DiagnosticLead', diagnosticLeadSchema);
+
+module.exports = { DiagnosticLead, CATEGORIES, CATEGORY_LABELS };
