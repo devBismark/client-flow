@@ -18,6 +18,8 @@ const CATEGORY_LABELS = {
   ainda_nao_sei: 'Ainda não sei',
 };
 
+const STATUSES = ['novo', 'em_analise', 'proposta', 'ganho', 'perdido'];
+
 const diagnosticLeadSchema = new mongoose.Schema(
   {
     nomeEmpresa: {
@@ -62,10 +64,15 @@ const diagnosticLeadSchema = new mongoose.Schema(
       maxlength: 200,
       default: '',
     },
+    status: {
+      type: String,
+      enum: STATUSES,
+      default: 'novo',
+    },
   },
   { timestamps: true }
 );
 
 const DiagnosticLead = mongoose.model('DiagnosticLead', diagnosticLeadSchema);
 
-module.exports = { DiagnosticLead, CATEGORIES, CATEGORY_LABELS };
+module.exports = { DiagnosticLead, CATEGORIES, CATEGORY_LABELS, STATUSES };

@@ -169,6 +169,49 @@
     cursor: pointer;
   }
   .btn-remover:hover { border-color: var(--danger); }
+
+  .status-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 1px;
+    padding: 4px 10px;
+    margin-bottom: 12px;
+  }
+  .status-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .status-select {
+    flex: 1;
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px;
+  }
+  .status-select option { background: #0A0A0C; color: var(--text); }
+  .btn-salvar-status {
+    background: transparent;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 8px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn-salvar-status:hover { border-color: var(--steel-2); }
+  .btn-salvar-status.saved { color: var(--text); border-color: var(--steel-2); }
   .empty {
     color: var(--muted);
     text-align: center;
@@ -206,6 +249,15 @@ const CATEGORY_LABELS = {
   saas_produtos_digitais: 'SaaS e produtos digitais',
   apis_integracoes: 'APIs e integrações',
   ainda_nao_sei: 'Ainda não sei',
+};
+
+const STATUSES = ['novo', 'em_analise', 'proposta', 'ganho', 'perdido'];
+const STATUS_LABELS = {
+  novo: 'Novo',
+  em_analise: 'Em análise',
+  proposta: 'Proposta',
+  ganho: 'Ganho',
+  perdido: 'Perdido',
 };
 
 const grid = document.getElementById('grid');
@@ -271,10 +323,17 @@ function render(leads, meta) {
 
     const criado = lead.createdAt ? new Date(lead.createdAt).toLocaleString('pt-PT') : '';
 
+    const status = lead.status || 'novo';
+    const statusOptions = STATUSES.map(s =>
+      `<option value="${s}" ${s === status ? 'selected' : ''}>${escapeHtml(STATUS_LABELS[s] || s)}</option>`
+    ).join('');
+
     return `
       <div class="card" data-id="${lead._id}">
         <h3>${escapeHtml(lead.nomeEmpresa)}</h3>
         <div class="contact">${escapeHtml(lead.contato)}</div>
+
+        <div class="status-tag">${escapeHtml(STATUS_LABELS[status] || status)}</div>
 
         <div class="categorias">${categorias}</div>
 
@@ -295,6 +354,11 @@ function render(leads, meta) {
 
         <div class="meta-row"><span>${criado}</span></div>
 
+        <div class="status-row">
+          <select class="status-select" data-id="${lead._id}">${statusOptions}</select>
+          <button class="btn-salvar-status" data-id="${lead._id}">Salvar status</button>
+        </div>
+
         <button class="btn-remover" data-id="${lead._id}">Remover</button>
       </div>
     `;
@@ -304,6 +368,36 @@ function render(leads, meta) {
 }
 
 function bindEvents() {
+  document.querySelectorAll('.btn-salvar-status').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const card = btn.closest('.card');
+      const select = card.querySelector('.status-select');
+      const novoStatus = select.value;
+
+      try {
+        const res = await fetch(`/api/diagnostics/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: novoStatus }),
+        });
+        if (!res.ok) throw new Error('Falha ao salvar status.');
+
+        const statusTag = card.querySelector('.status-tag');
+        statusTag.textContent = STATUS_LABELS[novoStatus] || novoStatus;
+
+        btn.classList.add('saved');
+        btn.textContent = 'Salvo';
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.textContent = 'Salvar status';
+        }, 1600);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
   document.querySelectorAll('.btn-remover').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;

@@ -1,5 +1,5 @@
 const express = require('express');
-const { DiagnosticLead } = require('../models/DiagnosticLead');
+const { DiagnosticLead, STATUSES } = require('../models/DiagnosticLead');
 const { notifyNewDiagnostic } = require('../services/notificationService');
 const { requireAdminKey } = require('../middlewares/auth');
 const { createRateLimiter } = require('../middlewares/rateLimiter');
@@ -8,7 +8,7 @@ const router = express.Router();
 const diagnosticsAdminLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 60,
-  methods: ['GET', 'DELETE'],
+  methods: ['GET', 'PATCH', 'DELETE'],
 });
 
 function maskIp(ip) {
@@ -96,6 +96,39 @@ router.get('/:id', diagnosticsAdminLimiter, requireAdminKey, async (req, res, ne
     if (!lead) {
       return res.status(404).json({ error: { message: 'Lead não encontrado' } });
     }
+    res.json({ data: lead });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/diagnostics/:id/status — admin, atualiza status
+router.patch('/:id/status', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
+  try {
+    const { status } = req.body;
+
+    if (!STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: { message: 'Status inválido', allowed: STATUSES },
+      });
+    }
+
+    const lead = await DiagnosticLead.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { returnDocument: 'after', runValidators: true }
+    );
+
+    if (!lead) {
+      return res.status(404).json({ error: { message: 'Lead não encontrado' } });
+    }
+
+    logAudit('diagnostic_lead_status_updated', {
+      leadId: String(lead._id),
+      status: lead.status,
+      ip: maskIp(req.ip),
+    });
+
     res.json({ data: lead });
   } catch (error) {
     next(error);

@@ -33,6 +33,12 @@ describe('POST /api/diagnostics', () => {
     expect(res.body.data.categorias).toEqual(['automacoes']);
   });
 
+  test('status default é "novo"', async () => {
+    const res = await request(app).post('/api/diagnostics').send(payloadBase());
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe('novo');
+  });
+
   test('não exige admin key (rota pública)', async () => {
     const res = await request(app).post('/api/diagnostics').send(payloadBase());
     expect(res.status).toBe(201);
@@ -212,6 +218,50 @@ describe('GET /api/diagnostics/:id', () => {
   test('400 para id malformado', async () => {
     const res = await request(app).get('/api/diagnostics/id-invalido').set(AUTH);
     expect(res.status).toBe(400);
+  });
+});
+
+describe('PATCH /api/diagnostics/:id/status', () => {
+  test('401 sem admin key', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/status`)
+      .send({ status: 'em_analise' });
+    expect(res.status).toBe(401);
+  });
+
+  test('200 com status válido e altera o status', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/status`)
+      .set(AUTH)
+      .send({ status: 'em_analise' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('em_analise');
+
+    const get = await request(app).get(`/api/diagnostics/${lead._id}`).set(AUTH);
+    expect(get.body.data.status).toBe('em_analise');
+  });
+
+  test('400 para status inválido', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/status`)
+      .set(AUTH)
+      .send({ status: 'status_que_nao_existe' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.allowed).toContain('novo');
+  });
+
+  test('404 para id inexistente', async () => {
+    const res = await request(app)
+      .patch('/api/diagnostics/000000000000000000000000/status')
+      .set(AUTH)
+      .send({ status: 'ganho' });
+
+    expect(res.status).toBe(404);
   });
 });
 
