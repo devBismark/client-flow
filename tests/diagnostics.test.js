@@ -45,6 +45,12 @@ describe('POST /api/diagnostics', () => {
     expect(res.body.data.notaInterna).toBe('');
   });
 
+  test('prioridade default é "media"', async () => {
+    const res = await request(app).post('/api/diagnostics').send(payloadBase());
+    expect(res.status).toBe(201);
+    expect(res.body.data.prioridade).toBe('media');
+  });
+
   test('não exige admin key (rota pública)', async () => {
     const res = await request(app).post('/api/diagnostics').send(payloadBase());
     expect(res.status).toBe(201);
@@ -394,6 +400,69 @@ describe('PATCH /api/diagnostics/:id/note', () => {
     expect(logged).toContain('[audit]');
     expect(logged).toContain('diagnostic_lead_note_updated');
     expect(logged).not.toContain('TEXTO_SIGILOSO_QUE_NAO_PODE_VAZAR');
+
+    spy.mockRestore();
+  });
+});
+
+describe('PATCH /api/diagnostics/:id/priority', () => {
+  test('401 sem admin key', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/priority`)
+      .send({ prioridade: 'alta' });
+    expect(res.status).toBe(401);
+  });
+
+  test('200 com prioridade válida e altera a prioridade', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/priority`)
+      .set(AUTH)
+      .send({ prioridade: 'alta' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.prioridade).toBe('alta');
+
+    const get = await request(app).get(`/api/diagnostics/${lead._id}`).set(AUTH);
+    expect(get.body.data.prioridade).toBe('alta');
+  });
+
+  test('400 para prioridade inválida', async () => {
+    const lead = await criarLead();
+    const res = await request(app)
+      .patch(`/api/diagnostics/${lead._id}/priority`)
+      .set(AUTH)
+      .send({ prioridade: 'urgentissima' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.allowed).toContain('media');
+  });
+
+  test('404 para id inexistente', async () => {
+    const res = await request(app)
+      .patch('/api/diagnostics/000000000000000000000000/priority')
+      .set(AUTH)
+      .send({ prioridade: 'baixa' });
+
+    expect(res.status).toBe(404);
+  });
+
+  test('log de auditoria registra from/to sem PII', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const lead = await criarLead();
+
+    await request(app)
+      .patch(`/api/diagnostics/${lead._id}/priority`)
+      .set(AUTH)
+      .send({ prioridade: 'alta' });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const logged = spy.mock.calls[0][0];
+    expect(logged).toContain('[audit]');
+    expect(logged).toContain('diagnostic_lead_priority_updated');
+    expect(logged).toContain('"from":"media"');
+    expect(logged).toContain('"to":"alta"');
 
     spy.mockRestore();
   });

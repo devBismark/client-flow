@@ -242,6 +242,52 @@
   }
   .btn-salvar-nota:hover { border-color: var(--steel-2); }
   .btn-salvar-nota.saved { color: var(--text); border-color: var(--steel-2); }
+
+  .prioridade-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    border: 1px solid;
+    border-radius: 1px;
+    padding: 4px 10px;
+    margin-bottom: 12px;
+    margin-left: 8px;
+  }
+  .prioridade-tag.baixa { color: var(--steel-3); border-color: rgba(138,144,152,0.32); }
+  .prioridade-tag.media { color: var(--steel-2); border-color: rgba(201,205,212,0.4); }
+  .prioridade-tag.alta { color: var(--danger); border-color: rgba(168,90,90,0.4); }
+  .prioridade-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .prioridade-select {
+    flex: 1;
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px;
+  }
+  .prioridade-select option { background: #0A0A0C; color: var(--text); }
+  .btn-salvar-prioridade {
+    background: transparent;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 8px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn-salvar-prioridade:hover { border-color: var(--steel-2); }
+  .btn-salvar-prioridade.saved { color: var(--text); border-color: var(--steel-2); }
   .empty {
     color: var(--muted);
     text-align: center;
@@ -309,6 +355,13 @@ const STATUS_LABELS = {
   proposta: 'Proposta',
   ganho: 'Ganho',
   perdido: 'Perdido',
+};
+
+const PRIORITIES = ['baixa', 'media', 'alta'];
+const PRIORITY_LABELS = {
+  baixa: 'Baixa',
+  media: 'Média',
+  alta: 'Alta',
 };
 
 const grid = document.getElementById('grid');
@@ -419,12 +472,18 @@ function render(leads, meta) {
       `<option value="${s}" ${s === status ? 'selected' : ''}>${escapeHtml(STATUS_LABELS[s] || s)}</option>`
     ).join('');
 
+    const prioridade = lead.prioridade || 'media';
+    const prioridadeOptions = PRIORITIES.map(p =>
+      `<option value="${p}" ${p === prioridade ? 'selected' : ''}>${escapeHtml(PRIORITY_LABELS[p] || p)}</option>`
+    ).join('');
+
     return `
       <div class="card" data-id="${lead._id}">
         <h3>${escapeHtml(lead.nomeEmpresa)}</h3>
         <div class="contact">${escapeHtml(lead.contato)}</div>
 
         <div class="status-tag">${escapeHtml(STATUS_LABELS[status] || status)}</div>
+        <div class="prioridade-tag ${prioridade}">${escapeHtml(PRIORITY_LABELS[prioridade] || prioridade)}</div>
 
         <div class="categorias">${categorias}</div>
 
@@ -448,6 +507,11 @@ function render(leads, meta) {
         <div class="status-row">
           <select class="status-select" data-id="${lead._id}">${statusOptions}</select>
           <button class="btn-salvar-status" data-id="${lead._id}">Salvar status</button>
+        </div>
+
+        <div class="prioridade-row">
+          <select class="prioridade-select" data-id="${lead._id}">${prioridadeOptions}</select>
+          <button class="btn-salvar-prioridade" data-id="${lead._id}">Salvar prioridade</button>
         </div>
 
         <div class="field-label">Nota interna</div>
@@ -486,6 +550,37 @@ function bindEvents() {
         setTimeout(() => {
           btn.classList.remove('saved');
           btn.textContent = 'Salvar status';
+        }, 1600);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-salvar-prioridade').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const card = btn.closest('.card');
+      const select = card.querySelector('.prioridade-select');
+      const novaPrioridade = select.value;
+
+      try {
+        const res = await fetch(`/api/diagnostics/${id}/priority`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prioridade: novaPrioridade }),
+        });
+        if (!res.ok) throw new Error('Falha ao salvar prioridade.');
+
+        const prioridadeTag = card.querySelector('.prioridade-tag');
+        prioridadeTag.textContent = PRIORITY_LABELS[novaPrioridade] || novaPrioridade;
+        prioridadeTag.className = `prioridade-tag ${novaPrioridade}`;
+
+        btn.classList.add('saved');
+        btn.textContent = 'Salvo';
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.textContent = 'Salvar prioridade';
         }, 1600);
       } catch (err) {
         alert(err.message);

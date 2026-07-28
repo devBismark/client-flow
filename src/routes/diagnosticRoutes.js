@@ -1,5 +1,5 @@
 const express = require('express');
-const { DiagnosticLead, STATUSES, CATEGORIES } = require('../models/DiagnosticLead');
+const { DiagnosticLead, STATUSES, CATEGORIES, PRIORITIES } = require('../models/DiagnosticLead');
 const { notifyNewDiagnostic } = require('../services/notificationService');
 const { requireAdminKey } = require('../middlewares/auth');
 const { createRateLimiter } = require('../middlewares/rateLimiter');
@@ -169,6 +169,43 @@ router.patch('/:id/note', diagnosticsAdminLimiter, requireAdminKey, async (req, 
     logAudit('diagnostic_lead_note_updated', {
       leadId: String(lead._id),
       noteLength: lead.notaInterna ? lead.notaInterna.length : 0,
+      ip: maskIp(req.ip),
+    });
+
+    res.json({ data: lead });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/diagnostics/:id/priority — admin, atualiza prioridade
+router.patch('/:id/priority', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next) => {
+  try {
+    const { prioridade } = req.body;
+
+    if (!PRIORITIES.includes(prioridade)) {
+      return res.status(400).json({
+        error: { message: 'Prioridade inválida', allowed: PRIORITIES },
+      });
+    }
+
+    const leadAntes = await DiagnosticLead.findById(req.params.id);
+    if (!leadAntes) {
+      return res.status(404).json({ error: { message: 'Lead não encontrado' } });
+    }
+
+    const from = leadAntes.prioridade;
+
+    const lead = await DiagnosticLead.findByIdAndUpdate(
+      req.params.id,
+      { prioridade },
+      { returnDocument: 'after', runValidators: true }
+    );
+
+    logAudit('diagnostic_lead_priority_updated', {
+      leadId: String(lead._id),
+      from,
+      to: lead.prioridade,
       ip: maskIp(req.ip),
     });
 
