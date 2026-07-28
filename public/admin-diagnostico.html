@@ -218,6 +218,16 @@
     padding: 90px 20px;
     font-size: 12.5px;
   }
+  .filtro-select {
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+  .filtro-select option { background: #0A0A0C; color: var(--text); }
 </style>
 </head>
 <body>
@@ -228,6 +238,17 @@
     <div class="section-id">Painel / Leads</div>
   </div>
   <div class="rule"></div>
+
+  <div class="bar">
+    <select id="filtro-status" class="filtro-select">
+      <option value="">Todos os status</option>
+    </select>
+    <select id="filtro-categoria" class="filtro-select">
+      <option value="">Todas as categorias</option>
+    </select>
+    <button class="btn" id="aplicar-filtros">Aplicar filtros</button>
+    <button class="btn" id="limpar-filtros">Limpar filtros</button>
+  </div>
 
   <div class="bar">
     <button class="btn" id="anterior">Anterior</button>
@@ -266,6 +287,8 @@ const pageInfo = document.getElementById('page-info');
 
 let paginaAtual = 1;
 const LIMITE = 20;
+let filtroStatus = '';
+let filtroCategoria = '';
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -290,9 +313,47 @@ document.getElementById('proxima').addEventListener('click', () => {
   carregar();
 });
 
+function popularFiltros() {
+  const selectStatus = document.getElementById('filtro-status');
+  STATUSES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = STATUS_LABELS[s] || s;
+    selectStatus.appendChild(opt);
+  });
+
+  const selectCategoria = document.getElementById('filtro-categoria');
+  Object.entries(CATEGORY_LABELS).forEach(([value, label]) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    selectCategoria.appendChild(opt);
+  });
+}
+
+document.getElementById('aplicar-filtros').addEventListener('click', () => {
+  filtroStatus = document.getElementById('filtro-status').value;
+  filtroCategoria = document.getElementById('filtro-categoria').value;
+  paginaAtual = 1;
+  carregar();
+});
+
+document.getElementById('limpar-filtros').addEventListener('click', () => {
+  document.getElementById('filtro-status').value = '';
+  document.getElementById('filtro-categoria').value = '';
+  filtroStatus = '';
+  filtroCategoria = '';
+  paginaAtual = 1;
+  carregar();
+});
+
 async function carregar() {
   try {
-    const res = await fetch(`/api/diagnostics?page=${paginaAtual}&limit=${LIMITE}`);
+    const params = new URLSearchParams({ page: paginaAtual, limit: LIMITE });
+    if (filtroStatus) params.set('status', filtroStatus);
+    if (filtroCategoria) params.set('categoria', filtroCategoria);
+
+    const res = await fetch(`/api/diagnostics?${params.toString()}`);
     const body = await res.json();
     if (!res.ok) throw new Error(body.error?.message || 'Não foi possível carregar.');
     render(body.data, body.meta);
@@ -414,7 +475,10 @@ function bindEvents() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', carregar);
+document.addEventListener('DOMContentLoaded', () => {
+  popularFiltros();
+  carregar();
+});
 </script>
 </body>
 </html>

@@ -192,6 +192,73 @@ describe('GET /api/diagnostics (admin)', () => {
     expect(res.body.data).toHaveLength(2);
     expect(res.body.meta.total).toBe(2);
   });
+
+  test('filtra por status', async () => {
+    const lead = await criarLead({ nomeEmpresa: 'Lead Ganho' });
+    await request(app)
+      .patch(`/api/diagnostics/${lead._id}/status`)
+      .set(AUTH)
+      .send({ status: 'ganho' });
+    await criarLead({ nomeEmpresa: 'Lead Novo' });
+
+    const res = await request(app).get('/api/diagnostics?status=ganho').set(AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].status).toBe('ganho');
+  });
+
+  test('filtra por categoria', async () => {
+    await criarLead({ nomeEmpresa: 'Lead Automacoes', categorias: ['automacoes'] });
+    await criarLead({ nomeEmpresa: 'Lead APIs', categorias: ['apis_integracoes'] });
+
+    const res = await request(app).get('/api/diagnostics?categoria=automacoes').set(AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].categorias).toContain('automacoes');
+  });
+
+  test('combina filtros de status e categoria', async () => {
+    const alvo = await criarLead({ nomeEmpresa: 'Alvo', categorias: ['automacoes'] });
+    await request(app)
+      .patch(`/api/diagnostics/${alvo._id}/status`)
+      .set(AUTH)
+      .send({ status: 'proposta' });
+
+    await criarLead({ nomeEmpresa: 'Mesma categoria, status novo', categorias: ['automacoes'] });
+    await criarLead({ nomeEmpresa: 'Outra categoria', categorias: ['apis_integracoes'] });
+
+    const res = await request(app)
+      .get('/api/diagnostics?status=proposta&categoria=automacoes')
+      .set(AUTH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0]._id).toBe(alvo._id);
+  });
+
+  test('status inválido no filtro retorna 400', async () => {
+    const res = await request(app).get('/api/diagnostics?status=status_que_nao_existe').set(AUTH);
+    expect(res.status).toBe(400);
+  });
+
+  test('categoria inválida no filtro retorna 400', async () => {
+    const res = await request(app).get('/api/diagnostics?categoria=categoria_que_nao_existe').set(AUTH);
+    expect(res.status).toBe(400);
+  });
+
+  test('paginação continua funcionando combinada com filtro', async () => {
+    await criarLead({ nomeEmpresa: 'A', categorias: ['automacoes'] });
+    await criarLead({ nomeEmpresa: 'B', categorias: ['automacoes'] });
+    await criarLead({ nomeEmpresa: 'C', categorias: ['automacoes'] });
+
+    const res = await request(app)
+      .get('/api/diagnostics?categoria=automacoes&limit=2')
+      .set(AUTH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.meta.total).toBe(3);
+  });
 });
 
 describe('GET /api/diagnostics/:id', () => {

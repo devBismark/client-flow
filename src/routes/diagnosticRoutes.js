@@ -1,5 +1,5 @@
 const express = require('express');
-const { DiagnosticLead, STATUSES } = require('../models/DiagnosticLead');
+const { DiagnosticLead, STATUSES, CATEGORIES } = require('../models/DiagnosticLead');
 const { notifyNewDiagnostic } = require('../services/notificationService');
 const { requireAdminKey } = require('../middlewares/auth');
 const { createRateLimiter } = require('../middlewares/rateLimiter');
@@ -78,9 +78,25 @@ router.get('/', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next)
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
 
+    const filter = {};
+
+    if (req.query.status !== undefined) {
+      if (!STATUSES.includes(req.query.status)) {
+        return res.status(400).json({ error: { message: 'Status inválido', allowed: STATUSES } });
+      }
+      filter.status = req.query.status;
+    }
+
+    if (req.query.categoria !== undefined) {
+      if (!CATEGORIES.includes(req.query.categoria)) {
+        return res.status(400).json({ error: { message: 'Categoria inválida', allowed: CATEGORIES } });
+      }
+      filter.categorias = req.query.categoria;
+    }
+
     const [items, total] = await Promise.all([
-      DiagnosticLead.find().sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
-      DiagnosticLead.countDocuments(),
+      DiagnosticLead.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      DiagnosticLead.countDocuments(filter),
     ]);
 
     res.json({ data: items, meta: { page, limit, total } });
