@@ -1,8 +1,12 @@
+process.env.ADMIN_KEY = 'test-key';
+
 require('./setup');
 
 const request = require('supertest');
 const app = require('../app');
 const { notifyNewDiagnostic } = require('../src/services/notificationService');
+
+const AUTH = { 'x-admin-key': 'test-key' };
 
 function payloadBase(overrides = {}) {
   return {
@@ -12,6 +16,11 @@ function payloadBase(overrides = {}) {
     descricaoBreve: 'Queremos automatizar o atendimento inicial.',
     ...overrides,
   };
+}
+
+async function criarLead(overrides = {}) {
+  const res = await request(app).post('/api/diagnostics').send(payloadBase(overrides));
+  return res.body.data;
 }
 
 describe('POST /api/diagnostics', () => {
@@ -151,6 +160,82 @@ describe('POST /api/diagnostics', () => {
     expect(res.status).toBe(201);
     expect(res.body.data.estagioAtual).toBe('Ideia inicial');
     expect(res.body.data.urgencia).toBe('Este mês');
+  });
+});
+
+describe('GET /api/diagnostics (admin)', () => {
+  test('401 sem header x-admin-key', async () => {
+    const res = await request(app).get('/api/diagnostics');
+    expect(res.status).toBe(401);
+  });
+
+  test('200 com chave correta, lista vazia quando não há leads', async () => {
+    const res = await request(app).get('/api/diagnostics').set(AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.meta.total).toBe(0);
+  });
+
+  test('retorna leads criados com meta de paginação', async () => {
+    await criarLead({ nomeEmpresa: 'Lead A' });
+    await criarLead({ nomeEmpresa: 'Lead B' });
+
+    const res = await request(app).get('/api/diagnostics').set(AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.meta.total).toBe(2);
+  });
+});
+
+describe('GET /api/diagnostics/:id', () => {
+  test('401 sem admin key', async () => {
+    const lead = await criarLead();
+    const res = await request(app).get(`/api/diagnostics/${lead._id}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('200 retorna lead existente', async () => {
+    const lead = await criarLead();
+    const res = await request(app).get(`/api/diagnostics/${lead._id}`).set(AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.data._id).toBe(lead._id);
+  });
+
+  test('404 para id válido inexistente', async () => {
+    const res = await request(app)
+      .get('/api/diagnostics/000000000000000000000000')
+      .set(AUTH);
+    expect(res.status).toBe(404);
+  });
+
+  test('400 para id malformado', async () => {
+    const res = await request(app).get('/api/diagnostics/id-invalido').set(AUTH);
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/diagnostics/:id', () => {
+  test('401 sem admin key', async () => {
+    const lead = await criarLead();
+    const res = await request(app).delete(`/api/diagnostics/${lead._id}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('remove lead existente e confirma via GET subsequente (404)', async () => {
+    const lead = await criarLead();
+    const del = await request(app).delete(`/api/diagnostics/${lead._id}`).set(AUTH);
+    expect(del.status).toBe(200);
+    expect(del.body.data._id).toBe(lead._id);
+
+    const get = await request(app).get(`/api/diagnostics/${lead._id}`).set(AUTH);
+    expect(get.status).toBe(404);
+  });
+
+  test('404 para id inexistente', async () => {
+    const res = await request(app)
+      .delete('/api/diagnostics/000000000000000000000000')
+      .set(AUTH);
+    expect(res.status).toBe(404);
   });
 });
 

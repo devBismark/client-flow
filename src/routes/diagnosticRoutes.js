@@ -1,6 +1,7 @@
 const express = require('express');
 const { DiagnosticLead } = require('../models/DiagnosticLead');
 const { notifyNewDiagnostic } = require('../services/notificationService');
+const { requireAdminKey } = require('../middlewares/auth');
 const router = express.Router();
 
 // POST /api/diagnostics — público (triagem geral do /diagnostico)
@@ -36,6 +37,49 @@ router.post('/', async (req, res, next) => {
     notifyNewDiagnostic(lead).catch((err) => {
       console.error('Falha ao notificar novo diagnóstico:', err.message);
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/diagnostics — admin, lista paginada
+router.get('/', requireAdminKey, async (req, res, next) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+
+    const [items, total] = await Promise.all([
+      DiagnosticLead.find().sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      DiagnosticLead.countDocuments(),
+    ]);
+
+    res.json({ data: items, meta: { page, limit, total } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/diagnostics/:id — admin, detalhe
+router.get('/:id', requireAdminKey, async (req, res, next) => {
+  try {
+    const lead = await DiagnosticLead.findById(req.params.id);
+    if (!lead) {
+      return res.status(404).json({ error: { message: 'Lead não encontrado' } });
+    }
+    res.json({ data: lead });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/diagnostics/:id — admin, remove
+router.delete('/:id', requireAdminKey, async (req, res, next) => {
+  try {
+    const lead = await DiagnosticLead.findByIdAndDelete(req.params.id);
+    if (!lead) {
+      return res.status(404).json({ error: { message: 'Lead não encontrado' } });
+    }
+    res.json({ data: { _id: lead._id } });
   } catch (error) {
     next(error);
   }

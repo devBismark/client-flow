@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel — Diagnóstico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #050506;
+    --steel-1: #6E7480;
+    --steel-2: #C9CDD4;
+    --steel-3: #8A9098;
+    --text: #FFFFFF;
+    --muted: #7C828C;
+    --glass: rgba(255,255,255,0.03);
+    --glass-hi: rgba(255,255,255,0.05);
+    --hairline: rgba(255,255,255,0.08);
+    --danger: #A85A5A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Space Mono', ui-monospace, monospace;
+  }
+  .wrap {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+  .top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .mark {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: .34em;
+    background: linear-gradient(100deg, #FFFFFF 0%, var(--steel-2) 28%, var(--steel-1) 52%, var(--steel-2) 74%, #FFFFFF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .section-id {
+    font-size: 10px;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+  }
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--steel-1) 12%, var(--steel-2) 50%, var(--steel-1) 88%, transparent);
+    opacity: .5;
+    margin-bottom: 34px;
+  }
+  .bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 34px;
+  }
+  .btn {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--steel-1);
+    border-radius: 2px;
+    padding: 12px 26px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--steel-2); }
+  .page-info {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 22px;
+  }
+  .card h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin: 0 0 4px;
+  }
+  .contact {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    word-break: break-all;
+  }
+  .categorias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .categoria-tag {
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 1px;
+    padding: 4px 8px;
+  }
+  .hairline {
+    height: 1px;
+    background: var(--hairline);
+    margin: 14px 0;
+  }
+  .field-label {
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    margin-bottom: 4px;
+  }
+  .field-text {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #B4B9C0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 12px;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--steel-3);
+    margin-bottom: 14px;
+  }
+  .btn-remover {
+    width: 100%;
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid rgba(168,90,90,0.4);
+    border-radius: 2px;
+    padding: 9px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn-remover:hover { border-color: var(--danger); }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 90px 20px;
+    font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="mark">IDISTØPIC <span style="opacity:.5">— Diagnóstico</span></div>
+    <div class="section-id">Painel / Leads</div>
+  </div>
+  <div class="rule"></div>
+
+  <div class="bar">
+    <button class="btn" id="anterior">Anterior</button>
+    <span class="page-info" id="page-info"></span>
+    <button class="btn" id="proxima">Próxima</button>
+    <button class="btn" id="sair" style="margin-left:auto">Sair</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">Carregando...</div>
+
+</div>
+
+<script>
+const CATEGORY_LABELS = {
+  sistemas_agentes_ia: 'Sistemas inteligentes e agentes de IA',
+  sites_landing_pages: 'Sites e landing pages',
+  automacoes: 'Automações',
+  saas_produtos_digitais: 'SaaS e produtos digitais',
+  apis_integracoes: 'APIs e integrações',
+  ainda_nao_sei: 'Ainda não sei',
+};
+
+const grid = document.getElementById('grid');
+const empty = document.getElementById('empty');
+const pageInfo = document.getElementById('page-info');
+
+let paginaAtual = 1;
+const LIMITE = 20;
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+
+document.getElementById('sair').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+});
+
+document.getElementById('anterior').addEventListener('click', () => {
+  if (paginaAtual > 1) {
+    paginaAtual -= 1;
+    carregar();
+  }
+});
+
+document.getElementById('proxima').addEventListener('click', () => {
+  paginaAtual += 1;
+  carregar();
+});
+
+async function carregar() {
+  try {
+    const res = await fetch(`/api/diagnostics?page=${paginaAtual}&limit=${LIMITE}`);
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível carregar.');
+    render(body.data, body.meta);
+  } catch (err) {
+    grid.innerHTML = '';
+    empty.textContent = err.message;
+    empty.style.display = 'block';
+  }
+}
+
+function render(leads, meta) {
+  const totalPaginas = Math.max(Math.ceil(meta.total / meta.limit), 1);
+  pageInfo.textContent = `página ${meta.page} de ${totalPaginas} — ${meta.total} lead(s)`;
+
+  if (!leads.length) {
+    grid.innerHTML = '';
+    empty.textContent = 'Nenhum lead encontrado.';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  grid.innerHTML = leads.map(lead => {
+    const categorias = (lead.categorias || [])
+      .map(c => `<span class="categoria-tag">${escapeHtml(CATEGORY_LABELS[c] || c)}</span>`)
+      .join('');
+
+    const criado = lead.createdAt ? new Date(lead.createdAt).toLocaleString('pt-PT') : '';
+
+    return `
+      <div class="card" data-id="${lead._id}">
+        <h3>${escapeHtml(lead.nomeEmpresa)}</h3>
+        <div class="contact">${escapeHtml(lead.contato)}</div>
+
+        <div class="categorias">${categorias}</div>
+
+        <div class="hairline"></div>
+
+        <div class="field-label">Descrição</div>
+        <div class="field-text">${escapeHtml(lead.descricaoBreve)}</div>
+
+        ${lead.estagioAtual ? `
+          <div class="field-label">Estágio atual</div>
+          <div class="field-text">${escapeHtml(lead.estagioAtual)}</div>
+        ` : ''}
+
+        ${lead.urgencia ? `
+          <div class="field-label">Urgência</div>
+          <div class="field-text">${escapeHtml(lead.urgencia)}</div>
+        ` : ''}
+
+        <div class="meta-row"><span>${criado}</span></div>
+
+        <button class="btn-remover" data-id="${lead._id}">Remover</button>
+      </div>
+    `;
+  }).join('');
+
+  bindEvents();
+}
+
+function bindEvents() {
+  document.querySelectorAll('.btn-remover').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      if (!confirm('Remover este lead permanentemente?')) return;
+
+      try {
+        const res = await fetch(`/api/diagnostics/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Falha ao remover.');
+        carregar();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', carregar);
+</script>
+</body>
+</html>

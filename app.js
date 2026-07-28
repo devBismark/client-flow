@@ -41,6 +41,10 @@ app.get('/admin.html', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+app.get('/admin-diagnostico.html', requireAdminSession, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-diagnostico.html'));
+});
+
 app.get('/diagnostico', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'diagnostico.html'));
 });
