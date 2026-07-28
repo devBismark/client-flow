@@ -1,5 +1,5 @@
 const express = require('express');
-const { DiagnosticLead, STATUSES, CATEGORIES, PRIORITIES } = require('../models/DiagnosticLead');
+const { DiagnosticLead, STATUSES, CATEGORIES, PRIORITIES, ORIGINS } = require('../models/DiagnosticLead');
 const { notifyNewDiagnostic } = require('../services/notificationService');
 const { requireAdminKey } = require('../middlewares/auth');
 const { createRateLimiter } = require('../middlewares/rateLimiter');
@@ -92,6 +92,13 @@ router.get('/', diagnosticsAdminLimiter, requireAdminKey, async (req, res, next)
         return res.status(400).json({ error: { message: 'Categoria inválida', allowed: CATEGORIES } });
       }
       filter.categorias = req.query.categoria;
+    }
+
+    if (req.query.origem !== undefined) {
+      if (!ORIGINS.includes(req.query.origem)) {
+        return res.status(400).json({ error: { message: 'Origem inválida', allowed: ORIGINS } });
+      }
+      filter.origem = req.query.origem;
     }
 
     const [items, total] = await Promise.all([

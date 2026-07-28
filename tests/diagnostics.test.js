@@ -51,6 +51,12 @@ describe('POST /api/diagnostics', () => {
     expect(res.body.data.prioridade).toBe('media');
   });
 
+  test('origem default é "diagnostico"', async () => {
+    const res = await request(app).post('/api/diagnostics').send(payloadBase());
+    expect(res.status).toBe(201);
+    expect(res.body.data.origem).toBe('diagnostico');
+  });
+
   test('não exige admin key (rota pública)', async () => {
     const res = await request(app).post('/api/diagnostics').send(payloadBase());
     expect(res.status).toBe(201);
@@ -256,6 +262,52 @@ describe('GET /api/diagnostics (admin)', () => {
   test('categoria inválida no filtro retorna 400', async () => {
     const res = await request(app).get('/api/diagnostics?categoria=categoria_que_nao_existe').set(AUTH);
     expect(res.status).toBe(400);
+  });
+
+  test('filtra por origem', async () => {
+    await criarLead({ nomeEmpresa: 'Lead origem diagnostico' });
+
+    const res = await request(app).get('/api/diagnostics?origem=diagnostico').set(AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].origem).toBe('diagnostico');
+  });
+
+  test('origem inválida no filtro retorna 400', async () => {
+    const res = await request(app).get('/api/diagnostics?origem=origem_que_nao_existe').set(AUTH);
+    expect(res.status).toBe(400);
+  });
+
+  test('combina origem com status e categoria', async () => {
+    const alvo = await criarLead({ nomeEmpresa: 'Alvo', categorias: ['automacoes'] });
+    await request(app)
+      .patch(`/api/diagnostics/${alvo._id}/status`)
+      .set(AUTH)
+      .send({ status: 'proposta' });
+
+    await criarLead({ nomeEmpresa: 'Outra categoria', categorias: ['apis_integracoes'] });
+
+    const res = await request(app)
+      .get('/api/diagnostics?origem=diagnostico&status=proposta&categoria=automacoes')
+      .set(AUTH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0]._id).toBe(alvo._id);
+  });
+
+  test('paginação continua funcionando combinada com origem', async () => {
+    await criarLead({ nomeEmpresa: 'A' });
+    await criarLead({ nomeEmpresa: 'B' });
+    await criarLead({ nomeEmpresa: 'C' });
+
+    const res = await request(app)
+      .get('/api/diagnostics?origem=diagnostico&limit=2')
+      .set(AUTH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.meta.total).toBe(3);
   });
 
   test('paginação continua funcionando combinada com filtro', async () => {

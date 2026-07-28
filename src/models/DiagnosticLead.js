@@ -20,6 +20,7 @@ const CATEGORY_LABELS = {
 
 const STATUSES = ['novo', 'em_analise', 'proposta', 'ganho', 'perdido'];
 const PRIORITIES = ['baixa', 'media', 'alta'];
+const ORIGINS = ['diagnostico'];
 
 const diagnosticLeadSchema = new mongoose.Schema(
   {
@@ -81,10 +82,15 @@ const diagnosticLeadSchema = new mongoose.Schema(
       enum: PRIORITIES,
       default: 'media',
     },
+    origem: {
+      type: String,
+      enum: ORIGINS,
+      default: 'diagnostico',
+    },
   },
   { timestamps: true }
 );
 
 const DiagnosticLead = mongoose.model('DiagnosticLead', diagnosticLeadSchema);
 
-module.exports = { DiagnosticLead, CATEGORIES, CATEGORY_LABELS, STATUSES, PRIORITIES };
+module.exports = { DiagnosticLead, CATEGORIES, CATEGORY_LABELS, STATUSES, PRIORITIES, ORIGINS };

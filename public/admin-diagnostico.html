@@ -322,6 +322,9 @@
     <select id="filtro-categoria" class="filtro-select">
       <option value="">Todas as categorias</option>
     </select>
+    <select id="filtro-origem" class="filtro-select">
+      <option value="">Todas as origens</option>
+    </select>
     <button class="btn" id="aplicar-filtros">Aplicar filtros</button>
     <button class="btn" id="limpar-filtros">Limpar filtros</button>
   </div>
@@ -364,6 +367,10 @@ const PRIORITY_LABELS = {
   alta: 'Alta',
 };
 
+const ORIGIN_LABELS = {
+  diagnostico: 'Diagnóstico',
+};
+
 const grid = document.getElementById('grid');
 const empty = document.getElementById('empty');
 const pageInfo = document.getElementById('page-info');
@@ -372,6 +379,7 @@ let paginaAtual = 1;
 const LIMITE = 20;
 let filtroStatus = '';
 let filtroCategoria = '';
+let filtroOrigem = '';
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -412,11 +420,20 @@ function popularFiltros() {
     opt.textContent = label;
     selectCategoria.appendChild(opt);
   });
+
+  const selectOrigem = document.getElementById('filtro-origem');
+  Object.entries(ORIGIN_LABELS).forEach(([value, label]) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    selectOrigem.appendChild(opt);
+  });
 }
 
 document.getElementById('aplicar-filtros').addEventListener('click', () => {
   filtroStatus = document.getElementById('filtro-status').value;
   filtroCategoria = document.getElementById('filtro-categoria').value;
+  filtroOrigem = document.getElementById('filtro-origem').value;
   paginaAtual = 1;
   carregar();
 });
@@ -424,8 +441,10 @@ document.getElementById('aplicar-filtros').addEventListener('click', () => {
 document.getElementById('limpar-filtros').addEventListener('click', () => {
   document.getElementById('filtro-status').value = '';
   document.getElementById('filtro-categoria').value = '';
+  document.getElementById('filtro-origem').value = '';
   filtroStatus = '';
   filtroCategoria = '';
+  filtroOrigem = '';
   paginaAtual = 1;
   carregar();
 });
@@ -435,6 +454,7 @@ async function carregar() {
     const params = new URLSearchParams({ page: paginaAtual, limit: LIMITE });
     if (filtroStatus) params.set('status', filtroStatus);
     if (filtroCategoria) params.set('categoria', filtroCategoria);
+    if (filtroOrigem) params.set('origem', filtroOrigem);
 
     const res = await fetch(`/api/diagnostics?${params.toString()}`);
     const body = await res.json();
@@ -484,6 +504,7 @@ function render(leads, meta) {
 
         <div class="status-tag">${escapeHtml(STATUS_LABELS[status] || status)}</div>
         <div class="prioridade-tag ${prioridade}">${escapeHtml(PRIORITY_LABELS[prioridade] || prioridade)}</div>
+        <div class="status-tag">${escapeHtml(ORIGIN_LABELS[lead.origem] || lead.origem || 'diagnostico')}</div>
 
         <div class="categorias">${categorias}</div>
 
