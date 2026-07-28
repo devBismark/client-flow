@@ -87,6 +87,54 @@ describe('POST /api/diagnostics', () => {
     expect(res.status).toBe(400);
   });
 
+  test('rejeita categorias duplicadas', async () => {
+    const res = await request(app)
+      .post('/api/diagnostics')
+      .send(payloadBase({ categorias: ['automacoes', 'automacoes'] }));
+
+    expect(res.status).toBe(400);
+  });
+
+  test('rejeita mais de 6 categorias', async () => {
+    const res = await request(app)
+      .post('/api/diagnostics')
+      .send(
+        payloadBase({
+          categorias: [
+            'sistemas_agentes_ia',
+            'sites_landing_pages',
+            'automacoes',
+            'saas_produtos_digitais',
+            'apis_integracoes',
+            'ainda_nao_sei',
+            'automacoes',
+          ],
+        })
+      );
+
+    expect(res.status).toBe(400);
+  });
+
+  test('aceita as 6 categorias únicas simultaneamente', async () => {
+    const res = await request(app)
+      .post('/api/diagnostics')
+      .send(
+        payloadBase({
+          categorias: [
+            'sistemas_agentes_ia',
+            'sites_landing_pages',
+            'automacoes',
+            'saas_produtos_digitais',
+            'apis_integracoes',
+            'ainda_nao_sei',
+          ],
+        })
+      );
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.categorias).toHaveLength(6);
+  });
+
   test('rejeita categoria fora do enum oficial', async () => {
     const res = await request(app)
       .post('/api/diagnostics')

@@ -36,8 +36,12 @@ const diagnosticLeadSchema = new mongoose.Schema(
       type: [{ type: String, enum: CATEGORIES }],
       required: true,
       validate: {
-        validator: (value) => Array.isArray(value) && value.length > 0,
-        message: 'Selecione ao menos uma categoria',
+        validator: (value) =>
+          Array.isArray(value) &&
+          value.length > 0 &&
+          value.length <= CATEGORIES.length &&
+          new Set(value).size === value.length,
+        message: `Selecione entre 1 e ${CATEGORIES.length} categorias, sem repetição`,
       },
     },
     descricaoBreve: {
