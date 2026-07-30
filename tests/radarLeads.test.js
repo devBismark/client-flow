@@ -623,6 +623,115 @@ describe('PATCH /api/radar/campaigns/:campaignId/leads/:id — análise manual',
   });
 });
 
+describe('PATCH /api/radar/campaigns/:campaignId/leads/:id — mensagem assistida', () => {
+  test('novo lead nasce com defaults de mensagem vazios', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    expect(lead.mensagemGerada).toBe('');
+    expect(lead.mensagemCanal).toBe('manual');
+    expect(lead.mensagemGeradaEm).toBeFalsy();
+  });
+
+  test('PATCH salva mensagemGerada, mensagemCanal e define mensagemGeradaEm', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({
+        mensagemGerada: 'Olá! Vi o trabalho de vocês e acho que posso ajudar.',
+        mensagemCanal: 'whatsapp',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.mensagemGerada).toBe('Olá! Vi o trabalho de vocês e acho que posso ajudar.');
+    expect(res.body.data.mensagemCanal).toBe('whatsapp');
+    expect(res.body.data.mensagemGeradaEm).toBeTruthy();
+  });
+
+  test('rejeita mensagemCanal inválido', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ mensagemCanal: 'sms' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('salvar mensagem em lead "analisado" avança automaticamente para "mensagem_gerada"', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ status: 'analisado' });
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ mensagemGerada: 'Mensagem sugerida.' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('mensagem_gerada');
+  });
+
+  test('status explícito diferente prevalece sobre o avanço automático da mensagem', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ status: 'analisado' });
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ mensagemGerada: 'Mensagem sugerida.', status: 'contatado' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('contatado');
+  });
+
+  test('mensagem salva em lead que ainda não foi analisado (status "novo") não avança sozinha', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+    expect(lead.status).toBe('novo');
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ mensagemGerada: 'Mensagem sugerida.' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('novo');
+  });
+
+  test('mensagem em lead já "contatado" não regride o status', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ status: 'contatado' });
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ mensagemGerada: 'Mensagem sugerida.', mensagemCanal: 'email' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('contatado');
+  });
+});
+
 describe('POST /api/radar/campaigns/:campaignId/leads/import', () => {
   async function importar(campaignId, texto) {
     return request(app)
@@ -1075,5 +1184,130 @@ describe('public/admin-radar.html — exclusão com confirmação', () => {
     expect(html).toContain('btn-excluir-campanha');
     expect(html).toContain('Excluir campanha');
     expect(html).toMatch(/btn-excluir-campanha[\s\S]{0,600}confirm\([\s\S]{0,400}prompt\(/);
+  });
+});
+
+describe('public/admin-radar.html — mensagem assistida', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const vm = require('vm');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin-radar.html'),
+    'utf8'
+  );
+
+  test('a UI inclui a seção "Mensagem assistida" com canal, gerar, textarea, salvar e copiar', () => {
+    expect(html).toContain('Mensagem assistida');
+    expect(html).toContain('campo-lead-mensagemCanal');
+    expect(html).toContain('btn-gerar-mensagem');
+    expect(html).toContain('campo-lead-mensagemGerada');
+    expect(html).toContain('btn-salvar-mensagem');
+    expect(html).toContain('btn-copiar-mensagem');
+    expect(html).toContain('Gerar mensagem');
+    expect(html).toContain('Salvar mensagem');
+    expect(html).toContain('Copiar mensagem');
+  });
+
+  test('o botão "Copiar mensagem" usa clipboard e não faz chamada de rede nem salva automaticamente', () => {
+    const match = html.match(/btn-copiar-mensagem'\)\.forEach\(btn => \{[\s\S]{0,600}?\}\);\n  \}\);/);
+    expect(match).not.toBeNull();
+    expect(match[0]).toContain('clipboard.writeText');
+    expect(match[0]).not.toContain('fetch(');
+  });
+
+  // Mesma técnica usada para pesquisa/captura assistida: sem jsdom, a lógica
+  // pura de geração de mensagem é testada executando o próprio <script> num
+  // sandbox `vm` com um `document` mínimo.
+  function carregarScriptCliente() {
+    const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
+    const code = scriptMatch[1];
+
+    function makeEl() {
+      return {
+        value: '', textContent: '', innerHTML: '', className: '', style: {}, dataset: {},
+        classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+        addEventListener() {},
+        appendChild() {},
+        querySelector() { return makeEl(); },
+        querySelectorAll() { return []; },
+        closest() { return makeEl(); },
+      };
+    }
+
+    const fakeDocument = {
+      getElementById() { return makeEl(); },
+      createElement() { return makeEl(); },
+      addEventListener() {},
+      querySelectorAll() { return []; },
+    };
+
+    const sandbox = {
+      document: fakeDocument,
+      window: {},
+      navigator: { clipboard: { writeText: async () => {} } },
+      fetch: async () => ({ ok: true, json: async () => ({ data: [], meta: { page: 1, limit: 20, total: 0 } }) }),
+      console,
+      URLSearchParams,
+      setTimeout,
+      alert: () => {},
+    };
+
+    vm.createContext(sandbox);
+    vm.runInContext(code, sandbox, { filename: 'admin-radar-script.js' });
+    return sandbox;
+  }
+
+  test('gerarMensagemAssistida() usa nomeEmpresa, nicho/cidade, produtoRecomendado e problemasEncontrados sem inventar dado', () => {
+    const sandbox = carregarScriptCliente();
+    const mensagem = sandbox.gerarMensagemAssistida(
+      {
+        nomeEmpresa: 'Clínica Exemplo',
+        nicho: 'Clínicas odontológicas',
+        cidade: 'Lisboa',
+        produtoRecomendado: 'Landing page',
+        solucaoRecomendada: '',
+        problemasEncontrados: ['não tem site'],
+      },
+      'whatsapp'
+    );
+
+    expect(mensagem).toContain('Clínica Exemplo');
+    expect(mensagem).toContain('Clínicas odontológicas em Lisboa');
+    expect(mensagem).toContain('não tem site');
+    expect(mensagem).toContain('Landing page');
+  });
+
+  test('gerarMensagemAssistida() nunca inventa contexto quando nicho/cidade/problemas estão vazios', () => {
+    const sandbox = carregarScriptCliente();
+    const mensagem = sandbox.gerarMensagemAssistida(
+      { nomeEmpresa: 'Clínica Vazia', nicho: '', cidade: '', produtoRecomendado: '', solucaoRecomendada: '', problemasEncontrados: [] },
+      'manual'
+    );
+
+    expect(mensagem).not.toMatch(/pesquisando sobre/);
+    expect(mensagem).not.toMatch(/notei que/);
+  });
+
+  test('gerarMensagemAssistida() adapta o fechamento por canal', () => {
+    const sandbox = carregarScriptCliente();
+    const lead = { nomeEmpresa: 'X', nicho: '', cidade: '', produtoRecomendado: '', solucaoRecomendada: '', problemasEncontrados: [] };
+
+    const whatsapp = sandbox.gerarMensagemAssistida(lead, 'whatsapp');
+    const email = sandbox.gerarMensagemAssistida(lead, 'email');
+
+    expect(whatsapp).not.toBe(email);
+  });
+
+  test('gerarMensagemAssistida() é uma função pura e nunca chama rede', () => {
+    const sandbox = carregarScriptCliente();
+    let fetchChamado = false;
+    sandbox.fetch = async () => { fetchChamado = true; return { ok: true, json: async () => ({}) }; };
+
+    sandbox.gerarMensagemAssistida(
+      { nomeEmpresa: 'X', nicho: 'Y', cidade: 'Z', produtoRecomendado: '', solucaoRecomendada: '', problemasEncontrados: [] },
+      'whatsapp'
+    );
+
+    expect(fetchChamado).toBe(false);
   });
 });

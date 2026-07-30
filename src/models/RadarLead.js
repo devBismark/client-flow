@@ -15,6 +15,8 @@ const STATUSES = [
 
 const PRIORITIES = ['baixa', 'media', 'alta', 'urgente'];
 
+const MESSAGE_CHANNELS = ['whatsapp', 'email', 'instagram', 'telefone', 'manual'];
+
 const radarLeadSchema = new mongoose.Schema(
   {
     campaign_id: {
@@ -156,6 +158,20 @@ const radarLeadSchema = new mongoose.Schema(
     analisadoEm: {
       type: Date,
     },
+    mensagemGerada: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: '',
+    },
+    mensagemCanal: {
+      type: String,
+      enum: MESSAGE_CHANNELS,
+      default: 'manual',
+    },
+    mensagemGeradaEm: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
@@ -177,6 +193,8 @@ const ANALYSIS_FIELDS = [
   'produtoRecomendado',
 ];
 
+const MESSAGE_FIELDS = ['mensagemGerada', 'mensagemCanal'];
+
 const RadarLead = mongoose.model('RadarLead', radarLeadSchema);
 
-module.exports = { RadarLead, STATUSES, PRIORITIES, ANALYSIS_FIELDS };
+module.exports = { RadarLead, STATUSES, PRIORITIES, ANALYSIS_FIELDS, MESSAGE_CHANNELS, MESSAGE_FIELDS };

@@ -1,5 +1,5 @@
 const express = require('express');
-const { RadarLead, STATUSES, PRIORITIES, ANALYSIS_FIELDS } = require('../models/RadarLead');
+const { RadarLead, STATUSES, PRIORITIES, ANALYSIS_FIELDS, MESSAGE_CHANNELS, MESSAGE_FIELDS } = require('../models/RadarLead');
 const { RadarCampaign } = require('../models/RadarCampaign');
 const { requireAdminKey } = require('../middlewares/auth');
 const router = express.Router({ mergeParams: true });
@@ -294,6 +294,8 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
       problemasEncontrados,
       solucaoRecomendada,
       produtoRecomendado,
+      mensagemGerada,
+      mensagemCanal,
     } = req.body;
 
     const updates = {};
@@ -322,15 +324,25 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
     if (problemasEncontrados !== undefined) updates.problemasEncontrados = problemasEncontrados;
     if (solucaoRecomendada !== undefined) updates.solucaoRecomendada = solucaoRecomendada;
     if (produtoRecomendado !== undefined) updates.produtoRecomendado = produtoRecomendado;
+    if (mensagemGerada !== undefined) updates.mensagemGerada = mensagemGerada;
+
+    if (mensagemCanal !== undefined) {
+      if (!MESSAGE_CHANNELS.includes(mensagemCanal)) {
+        return res.status(400).json({ error: { message: 'Canal de mensagem inválido', allowed: MESSAGE_CHANNELS } });
+      }
+      updates.mensagemCanal = mensagemCanal;
+    }
 
     const analiseAtualizada = ANALYSIS_FIELDS.some((field) => req.body[field] !== undefined);
+    const mensagemAtualizada = MESSAGE_FIELDS.some((field) => req.body[field] !== undefined);
 
     // O formulário de edição sempre reenvia o valor atual do select de status,
     // mesmo quando o usuário não o alterou. Por isso, "status enviado" só conta
     // como troca explícita quando difere do status atual do lead — caso contrário,
-    // o avanço automático novo → analisado (abaixo) fica livre para agir.
+    // os avanços automáticos novo → analisado e analisado → mensagem_gerada (abaixo)
+    // ficam livres para agir.
     let leadAtual = null;
-    if (status !== undefined || analiseAtualizada) {
+    if (status !== undefined || analiseAtualizada || mensagemAtualizada) {
       leadAtual = await RadarLead.findOne({ _id: req.params.id, campaign_id: campaign._id }).select('status');
     }
 
@@ -357,6 +369,14 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
 
       if (updates.status === undefined && leadAtual && leadAtual.status === 'novo') {
         updates.status = 'analisado';
+      }
+    }
+
+    if (mensagemAtualizada) {
+      updates.mensagemGeradaEm = new Date();
+
+      if (updates.status === undefined && leadAtual && leadAtual.status === 'analisado') {
+        updates.status = 'mensagem_gerada';
       }
     }
 

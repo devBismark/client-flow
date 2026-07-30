@@ -225,6 +225,7 @@
     margin-top: 10px;
   }
   .btn-secundario:hover { border-color: var(--steel-2); }
+  .btn-secundario.copiado { color: var(--text); border-color: var(--steel-2); }
   .btn-criar {
     background: transparent;
     color: var(--text);
@@ -671,6 +672,15 @@ const ANALISE_CHECKS = [
   ['parecePrecisarAutomacao', 'Parece precisar de automação'],
   ['parecePrecisarSistema', 'Parece precisar de sistema'],
 ];
+
+const MESSAGE_CHANNELS = ['whatsapp', 'email', 'instagram', 'telefone', 'manual'];
+const MESSAGE_CHANNEL_LABELS = {
+  whatsapp: 'WhatsApp',
+  email: 'Email',
+  instagram: 'Instagram',
+  telefone: 'Telefone',
+  manual: 'Manual',
+};
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -1319,6 +1329,57 @@ async function carregarLeads() {
   }
 }
 
+/* ---------- Mensagem assistida ---------- */
+
+function gerarMensagemAssistida(lead, canal) {
+  const nome = (lead.nomeEmpresa || '').trim();
+  const nicho = (lead.nicho || '').trim();
+  const cidade = (lead.cidade || '').trim();
+  const produto = (lead.produtoRecomendado || '').trim();
+  const solucao = (lead.solucaoRecomendada || '').trim();
+  const problemas = (lead.problemasEncontrados || []).map(p => (p || '').trim()).filter(Boolean);
+
+  const linhas = [];
+
+  const abertura = {
+    whatsapp: nome ? `Oi, tudo bem? Vi o trabalho da ${nome}.` : 'Oi, tudo bem?',
+    instagram: nome ? `Oi! Vi o perfil da ${nome}.` : 'Oi, tudo bem?',
+    email: nome ? `Olá! Escrevo em nome da IDISTØPIC sobre a ${nome}.` : 'Olá!',
+    telefone: nome ? `Olá, falo sobre a ${nome}.` : 'Olá!',
+    manual: nome ? `Olá! Sobre a ${nome}:` : 'Olá!',
+  };
+  linhas.push(abertura[canal] || abertura.manual);
+
+  // Só menciona nicho/cidade se pelo menos um dos dois estiver preenchido —
+  // nunca afirma ter pesquisado algo que não está registrado no lead.
+  const contexto = [nicho, cidade].filter(Boolean).join(' em ');
+  if (contexto) {
+    linhas.push(`Encontrei vocês pesquisando sobre ${contexto}.`);
+  }
+
+  // Só cita um problema encontrado se a análise manual realmente registrou um.
+  if (problemas.length > 0) {
+    linhas.push(`Durante essa pesquisa, notei que: ${problemas[0]}.`);
+  }
+
+  if (produto) {
+    linhas.push(`Achei que ${produto} pode fazer sentido para esse momento.`);
+  } else if (solucao) {
+    linhas.push(solucao);
+  }
+
+  const fechamento = {
+    whatsapp: 'Posso te contar mais por aqui, sem compromisso?',
+    instagram: 'Posso te mandar mais detalhes por aqui, sem compromisso?',
+    email: 'Fico à disposição para compartilhar mais detalhes, sem compromisso.',
+    telefone: 'Faz sentido marcarmos uma ligação rápida, sem compromisso?',
+    manual: 'Fico à disposição para mais detalhes, sem compromisso.',
+  };
+  linhas.push(fechamento[canal] || fechamento.manual);
+
+  return linhas.join(' ');
+}
+
 function renderLeads(leads, meta) {
   const totalPaginas = Math.max(Math.ceil(meta.total / meta.limit), 1);
   leadPageInfo.textContent = `página ${meta.page} de ${totalPaginas} — ${meta.total} lead(s)`;
@@ -1342,6 +1403,11 @@ function renderLeads(leads, meta) {
     ).join('');
     const prioridadeOptions = LEAD_PRIORITIES.map(p =>
       `<option value="${p}" ${p === prioridade ? 'selected' : ''}>${escapeHtml(LEAD_PRIORITY_LABELS[p] || p)}</option>`
+    ).join('');
+
+    const mensagemCanal = lead.mensagemCanal || 'manual';
+    const mensagemCanalOptions = MESSAGE_CHANNELS.map(c =>
+      `<option value="${c}" ${c === mensagemCanal ? 'selected' : ''}>${escapeHtml(MESSAGE_CHANNEL_LABELS[c] || c)}</option>`
     ).join('');
 
     return `
@@ -1406,6 +1472,22 @@ function renderLeads(leads, meta) {
           <input type="text" class="campo-lead-produtoRecomendado" value="${escapeHtml(lead.produtoRecomendado)}" maxlength="200">
 
           ${lead.analisadoEm ? `<div class="meta-row"><span>Analisado em ${new Date(lead.analisadoEm).toLocaleString('pt-PT')}</span></div>` : ''}
+        </div>
+
+        <button class="analise-toggle" type="button">Mensagem assistida ▾</button>
+        <div class="analise-body">
+          <div class="field-label">Canal</div>
+          <select class="campo-lead-mensagemCanal">${mensagemCanalOptions}</select>
+
+          <button class="btn-secundario btn-gerar-mensagem" type="button">Gerar mensagem</button>
+
+          <div class="field-label" style="margin-top:10px">Mensagem</div>
+          <textarea class="campo-lead-mensagemGerada" maxlength="2000">${escapeHtml(lead.mensagemGerada)}</textarea>
+
+          ${lead.mensagemGeradaEm ? `<div class="meta-row"><span>Gerada em ${new Date(lead.mensagemGeradaEm).toLocaleString('pt-PT')}</span></div>` : ''}
+
+          <button class="btn-salvar btn-salvar-mensagem" data-id="${lead._id}">Salvar mensagem</button>
+          <button class="btn-secundario btn-copiar-mensagem" type="button">Copiar mensagem</button>
         </div>
 
         <div class="meta-row"><span>${criado}</span></div>
@@ -1508,6 +1590,87 @@ function bindEventsLeads() {
         carregarLeads();
       } catch (err) {
         alert(err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-gerar-mensagem').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.card');
+      const canal = card.querySelector('.campo-lead-mensagemCanal').value;
+
+      const leadAtualCard = {
+        nomeEmpresa: card.querySelector('h3').textContent,
+        nicho: card.querySelector('.campo-lead-nicho').value.trim(),
+        cidade: card.querySelector('.campo-lead-cidade').value.trim(),
+        produtoRecomendado: card.querySelector('.campo-lead-produtoRecomendado').value.trim(),
+        solucaoRecomendada: card.querySelector('.campo-lead-solucaoRecomendada').value.trim(),
+        problemasEncontrados: card.querySelector('.campo-lead-problemasEncontrados').value
+          .split('\n')
+          .map(linha => linha.trim())
+          .filter(linha => linha.length > 0),
+      };
+
+      const mensagem = gerarMensagemAssistida(leadAtualCard, canal);
+      card.querySelector('.campo-lead-mensagemGerada').value = mensagem;
+    });
+  });
+
+  document.querySelectorAll('.btn-salvar-mensagem').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!campanhaAtual) return;
+      const id = btn.dataset.id;
+      const card = btn.closest('.card');
+
+      const payload = {
+        mensagemGerada: card.querySelector('.campo-lead-mensagemGerada').value.trim(),
+        mensagemCanal: card.querySelector('.campo-lead-mensagemCanal').value,
+      };
+
+      try {
+        const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error?.message || 'Falha ao salvar a mensagem.');
+
+        const leadAtualizado = body.data;
+
+        const statusTag = card.querySelector('.status-tag');
+        statusTag.textContent = LEAD_STATUS_LABELS[leadAtualizado.status] || leadAtualizado.status;
+        statusTag.className = `status-tag ${leadAtualizado.status}`;
+        card.querySelector('.campo-lead-status').value = leadAtualizado.status;
+
+        btn.classList.add('saved');
+        btn.textContent = 'Salvo';
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.textContent = 'Salvar mensagem';
+        }, 1600);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-copiar-mensagem').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.card');
+      const texto = card.querySelector('.campo-lead-mensagemGerada').value;
+
+      try {
+        await navigator.clipboard.writeText(texto);
+        const original = btn.textContent;
+        btn.classList.add('copiado');
+        btn.textContent = 'Copiado';
+        setTimeout(() => {
+          btn.classList.remove('copiado');
+          btn.textContent = original;
+        }, 1600);
+      } catch (err) {
+        alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.');
       }
     });
   });
