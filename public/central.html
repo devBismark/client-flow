@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central IDISTØPIC OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #050506;
+    --steel-1: #6E7480;
+    --steel-2: #C9CDD4;
+    --steel-3: #8A9098;
+    --text: #FFFFFF;
+    --muted: #7C828C;
+    --glass: rgba(255,255,255,0.03);
+    --hairline: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Space Mono', ui-monospace, monospace;
+  }
+  .wrap {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+  .top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .mark {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: .34em;
+    background: linear-gradient(100deg, #FFFFFF 0%, var(--steel-2) 28%, var(--steel-1) 52%, var(--steel-2) 74%, #FFFFFF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .section-id {
+    font-size: 10px;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+  }
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--steel-1) 12%, var(--steel-2) 50%, var(--steel-1) 88%, transparent);
+    opacity: .5;
+    margin-bottom: 34px;
+  }
+  .titulo-secao {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--steel-2);
+    margin: 0 0 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .card-link {
+    display: block;
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 24px;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .card-link:hover { border-color: var(--steel-2); }
+  .card-link h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    margin: 0 0 8px;
+    color: var(--text);
+  }
+  .card-link p {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.6;
+  }
+  .card-link.publico {
+    border-style: dashed;
+  }
+  .badge-publico {
+    display: inline-block;
+    font-size: 8px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px dashed var(--hairline);
+    border-radius: 1px;
+    padding: 3px 8px;
+    margin-bottom: 10px;
+  }
+  .btn {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--steel-1);
+    border-radius: 2px;
+    padding: 12px 26px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--steel-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="mark">IDISTØPIC <span style="opacity:.5">— Central</span></div>
+    <div class="section-id">Painel / Central</div>
+  </div>
+  <div class="rule"></div>
+
+  <h2 class="titulo-secao">Áreas internas</h2>
+  <div class="grid">
+    <a class="card-link" href="/admin.html">
+      <h3>Briefings / Client Flow</h3>
+      <p>Projetos de landing page, orçamentos e status do fluxo comercial.</p>
+    </a>
+    <a class="card-link" href="/admin-diagnostico.html">
+      <h3>Diagnóstico / CRM</h3>
+      <p>Leads do diagnóstico geral, triagem e acompanhamento.</p>
+    </a>
+    <a class="card-link" href="/admin-radar.html">
+      <h3>Radar / Prospecção</h3>
+      <p>Campanhas e leads de prospecção outbound.</p>
+    </a>
+  </div>
+
+  <h2 class="titulo-secao">Links públicos (abrem em nova aba)</h2>
+  <div class="grid">
+    <a class="card-link publico" href="/briefing" target="_blank" rel="noopener noreferrer">
+      <div class="badge-publico">Público</div>
+      <h3>Formulário de briefing</h3>
+      <p>Como o cliente vê o formulário de briefing de landing page.</p>
+    </a>
+    <a class="card-link publico" href="/diagnostico" target="_blank" rel="noopener noreferrer">
+      <div class="badge-publico">Público</div>
+      <h3>Diagnóstico público</h3>
+      <p>Formulário de diagnóstico geral, aberto a qualquer visitante.</p>
+    </a>
+    <a class="card-link publico" href="https://idistopic.com" target="_blank" rel="noopener noreferrer">
+      <div class="badge-publico">Público</div>
+      <h3>Site institucional</h3>
+      <p>idistopic.com</p>
+    </a>
+  </div>
+
+  <button class="btn" id="sair">Sair</button>
+
+</div>
+
+<script>
+document.getElementById('sair').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+});
+</script>
+</body>
+</html>
