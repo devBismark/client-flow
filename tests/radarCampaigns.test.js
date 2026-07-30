@@ -235,3 +235,66 @@ describe('PATCH /api/radar/campaigns/:id', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('DELETE /api/radar/campaigns/:id', () => {
+  test('401 sem admin key', async () => {
+    const campanha = await criarCampanha();
+    const res = await request(app).delete(`/api/radar/campaigns/${campanha._id}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('exclui campanha sem leads', async () => {
+    const campanha = await criarCampanha();
+
+    const res = await request(app)
+      .delete(`/api/radar/campaigns/${campanha._id}`)
+      .set(AUTH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data._id).toBe(campanha._id);
+
+    const busca = await request(app)
+      .get(`/api/radar/campaigns/${campanha._id}`)
+      .set(AUTH);
+    expect(busca.status).toBe(404);
+  });
+
+  test('409 ao tentar excluir campanha com leads — não apaga em cascata', async () => {
+    const campanha = await criarCampanha();
+    await request(app)
+      .post(`/api/radar/campaigns/${campanha._id}/leads`)
+      .set(AUTH)
+      .send({ nomeEmpresa: 'Lead Teste' });
+
+    const res = await request(app)
+      .delete(`/api/radar/campaigns/${campanha._id}`)
+      .set(AUTH);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.totalLeads).toBe(1);
+
+    const campanhaAinda = await request(app)
+      .get(`/api/radar/campaigns/${campanha._id}`)
+      .set(AUTH);
+    expect(campanhaAinda.status).toBe(200);
+
+    const leads = await request(app)
+      .get(`/api/radar/campaigns/${campanha._id}/leads`)
+      .set(AUTH);
+    expect(leads.body.meta.total).toBe(1);
+  });
+
+  test('404 para id inexistente', async () => {
+    const res = await request(app)
+      .delete('/api/radar/campaigns/64b000000000000000000000')
+      .set(AUTH);
+    expect(res.status).toBe(404);
+  });
+
+  test('400 quando id é malformado', async () => {
+    const res = await request(app)
+      .delete('/api/radar/campaigns/id-invalido')
+      .set(AUTH);
+    expect(res.status).toBe(400);
+  });
+});

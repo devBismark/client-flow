@@ -373,6 +373,71 @@ describe('PATCH /api/radar/campaigns/:campaignId/leads/:id', () => {
   });
 });
 
+describe('DELETE /api/radar/campaigns/:campaignId/leads/:id', () => {
+  test('401 sem admin key', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+    const res = await request(app).delete(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('exclui lead da campanha correta', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    const res = await request(app)
+      .delete(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data._id).toBe(lead._id);
+
+    const busca = await request(app)
+      .get(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH);
+    expect(busca.status).toBe(404);
+  });
+
+  test('404 para id inexistente', async () => {
+    const campanha = await criarCampanha();
+    const res = await request(app)
+      .delete(`/api/radar/campaigns/${campanha._id}/leads/${ID_INEXISTENTE}`)
+      .set(AUTH);
+    expect(res.status).toBe(404);
+  });
+
+  test('404 ao tentar excluir lead de outra campanha — nunca apaga por campaignId errado', async () => {
+    const campanhaA = await criarCampanha({ produto: 'Produto A' });
+    const campanhaB = await criarCampanha({ produto: 'Produto B' });
+    const lead = await criarLead(campanhaA._id, { nomeEmpresa: 'Lead da Campanha A' });
+
+    const res = await request(app)
+      .delete(`/api/radar/campaigns/${campanhaB._id}/leads/${lead._id}`)
+      .set(AUTH);
+
+    expect(res.status).toBe(404);
+
+    const aindaExiste = await request(app)
+      .get(`/api/radar/campaigns/${campanhaA._id}/leads/${lead._id}`)
+      .set(AUTH);
+    expect(aindaExiste.status).toBe(200);
+  });
+
+  test('404 quando campanha não existe', async () => {
+    const res = await request(app)
+      .delete(`/api/radar/campaigns/${ID_INEXISTENTE}/leads/${ID_INEXISTENTE}`)
+      .set(AUTH);
+    expect(res.status).toBe(404);
+  });
+
+  test('400 quando campaignId é malformado', async () => {
+    const res = await request(app)
+      .delete('/api/radar/campaigns/id-invalido/leads/id-invalido')
+      .set(AUTH);
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('PATCH /api/radar/campaigns/:campaignId/leads/:id — análise manual', () => {
   test('aceita campos booleanos de análise', async () => {
     const campanha = await criarCampanha();
@@ -989,5 +1054,26 @@ describe('public/admin-radar.html — captura assistida', () => {
     sandbox.extrairPreviaLead('Clínica X\ncontato@clinicax.pt\n+351 900 000 000', { cidade: 'Lisboa' });
 
     expect(fetchChamado).toBe(false);
+  });
+});
+
+describe('public/admin-radar.html — exclusão com confirmação', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin-radar.html'),
+    'utf8'
+  );
+
+  test('o card de lead tem botão "Excluir lead" com confirmação antes do DELETE', () => {
+    expect(html).toContain('btn-excluir-lead');
+    expect(html).toContain('Excluir lead');
+    expect(html).toMatch(/btn-excluir-lead[\s\S]{0,400}confirm\(/);
+  });
+
+  test('o card de campanha tem botão "Excluir campanha" com dupla confirmação (confirm + prompt) antes do DELETE', () => {
+    expect(html).toContain('btn-excluir-campanha');
+    expect(html).toContain('Excluir campanha');
+    expect(html).toMatch(/btn-excluir-campanha[\s\S]{0,600}confirm\([\s\S]{0,400}prompt\(/);
   });
 });

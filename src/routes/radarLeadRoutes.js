@@ -387,4 +387,27 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
   }
 });
 
+// DELETE /api/radar/campaigns/:campaignId/leads/:id — admin, remove lead (com confirmação no frontend)
+router.delete('/:id', requireAdminKey, async (req, res, next) => {
+  try {
+    const campaign = await loadCampaignOr404(req, res);
+    if (!campaign) return;
+
+    const lead = await RadarLead.findOneAndDelete({ _id: req.params.id, campaign_id: campaign._id });
+    if (!lead) {
+      return res.status(404).json({ error: { message: 'Lead não encontrado' } });
+    }
+
+    logAudit('radar_lead_deleted', {
+      campaignId: String(campaign._id),
+      leadId: String(lead._id),
+      ip: maskIp(req.ip),
+    });
+
+    res.json({ data: { _id: lead._id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

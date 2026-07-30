@@ -15,12 +15,12 @@ const loginRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 })
 const radarRateLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 60,
-  methods: ['GET', 'POST', 'PATCH'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
 });
 const radarLeadRateLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 60,
-  methods: ['GET', 'POST', 'PATCH'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
 });
 
 const app = express();

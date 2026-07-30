@@ -1,5 +1,6 @@
 const express = require('express');
 const { RadarCampaign, STATUSES } = require('../models/RadarCampaign');
+const { RadarLead } = require('../models/RadarLead');
 const { requireAdminKey } = require('../middlewares/auth');
 const router = express.Router();
 
@@ -130,6 +131,37 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
     });
 
     res.json({ data: campaign });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/radar/campaigns/:id — admin, remove campanha só se estiver vazia (sem leads)
+router.delete('/:id', requireAdminKey, async (req, res, next) => {
+  try {
+    const campaign = await RadarCampaign.findById(req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ error: { message: 'Campanha não encontrada' } });
+    }
+
+    const totalLeads = await RadarLead.countDocuments({ campaign_id: campaign._id });
+    if (totalLeads > 0) {
+      return res.status(409).json({
+        error: {
+          message: `Esta campanha tem ${totalLeads} lead(s). Exclua os leads antes de excluir a campanha.`,
+          totalLeads,
+        },
+      });
+    }
+
+    await RadarCampaign.findByIdAndDelete(campaign._id);
+
+    logAudit('radar_campaign_deleted', {
+      campaignId: String(campaign._id),
+      ip: maskIp(req.ip),
+    });
+
+    res.json({ data: { _id: campaign._id } });
   } catch (error) {
     next(error);
   }
