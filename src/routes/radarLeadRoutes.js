@@ -36,6 +36,27 @@ async function loadCampaignOr404(req, res) {
   return campaign;
 }
 
+const MAX_IMPORT_LINES = 500;
+
+function normalize(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function parseImportLine(line) {
+  const parts = line.split(';');
+  const [nomeEmpresa, cidade, pais, site, instagram, email, telefone, ...rest] = parts;
+  return {
+    nomeEmpresa: (nomeEmpresa || '').trim(),
+    cidade: (cidade || '').trim(),
+    pais: (pais || '').trim(),
+    site: (site || '').trim(),
+    instagram: (instagram || '').trim(),
+    email: (email || '').trim(),
+    telefone: (telefone || '').trim(),
+    observacoes: rest.join(';').trim(),
+  };
+}
+
 // POST /api/radar/campaigns/:campaignId/leads — admin, cria lead
 router.post('/', requireAdminKey, async (req, res, next) => {
   try {
@@ -78,6 +99,110 @@ router.post('/', requireAdminKey, async (req, res, next) => {
     });
 
     res.status(201).json({ data: lead });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/radar/campaigns/:campaignId/leads/import — admin, importa leads em lote a partir de texto colado
+router.post('/import', requireAdminKey, async (req, res, next) => {
+  try {
+    const campaign = await loadCampaignOr404(req, res);
+    if (!campaign) return;
+
+    const { texto } = req.body;
+    if (typeof texto !== 'string' || !texto.trim()) {
+      return res.status(400).json({ error: { message: 'Nenhum texto para importar' } });
+    }
+
+    const linhas = texto
+      .split('\n')
+      .map((linha) => linha.trim())
+      .filter((linha) => linha.length > 0);
+
+    if (linhas.length === 0) {
+      return res.status(400).json({ error: { message: 'Nenhum texto para importar' } });
+    }
+
+    if (linhas.length > MAX_IMPORT_LINES) {
+      return res.status(400).json({
+        error: { message: `Máximo de ${MAX_IMPORT_LINES} linhas por importação`, limit: MAX_IMPORT_LINES },
+      });
+    }
+
+    const existentes = await RadarLead.find({ campaign_id: campaign._id })
+      .select('nomeEmpresa cidade email telefone')
+      .lean();
+
+    const assinaturas = {
+      email: new Set(existentes.filter((l) => l.email).map((l) => normalize(l.email))),
+      telefone: new Set(existentes.filter((l) => l.telefone).map((l) => normalize(l.telefone))),
+      nomeCidade: new Set(existentes.map((l) => `${normalize(l.nomeEmpresa)}|${normalize(l.cidade)}`)),
+    };
+
+    const results = [];
+    let created = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (let i = 0; i < linhas.length; i += 1) {
+      const numeroLinha = i + 1;
+      const dados = parseImportLine(linhas[i]);
+
+      if (!dados.nomeEmpresa) {
+        errors += 1;
+        results.push({ line: numeroLinha, status: 'error', reason: 'nomeEmpresa é obrigatório' });
+        continue;
+      }
+
+      const emailNorm = normalize(dados.email);
+      const telefoneNorm = normalize(dados.telefone);
+      const nomeCidadeNorm = `${normalize(dados.nomeEmpresa)}|${normalize(dados.cidade)}`;
+
+      const isDuplicate =
+        (emailNorm && assinaturas.email.has(emailNorm)) ||
+        (telefoneNorm && assinaturas.telefone.has(telefoneNorm)) ||
+        assinaturas.nomeCidade.has(nomeCidadeNorm);
+
+      if (isDuplicate) {
+        skipped += 1;
+        results.push({ line: numeroLinha, status: 'skipped', reason: 'duplicado nesta campanha' });
+        continue;
+      }
+
+      try {
+        const lead = await RadarLead.create({
+          campaign_id: campaign._id,
+          ...dados,
+        });
+
+        if (emailNorm) assinaturas.email.add(emailNorm);
+        if (telefoneNorm) assinaturas.telefone.add(telefoneNorm);
+        assinaturas.nomeCidade.add(nomeCidadeNorm);
+
+        created += 1;
+        results.push({ line: numeroLinha, status: 'created', lead });
+      } catch (error) {
+        errors += 1;
+        results.push({ line: numeroLinha, status: 'error', reason: error.message });
+      }
+    }
+
+    logAudit('radar_lead_import', {
+      campaignId: String(campaign._id),
+      total: linhas.length,
+      created,
+      skipped,
+      errors,
+      ip: maskIp(req.ip),
+    });
+
+    res.json({
+      data: {
+        summary: { total: linhas.length, created, skipped, errors },
+        results,
+      },
+    });
   } catch (error) {
     next(error);
   }

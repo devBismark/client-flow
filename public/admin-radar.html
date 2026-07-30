@@ -261,6 +261,40 @@
     font-size: 11px;
     margin-top: 8px;
   }
+  .ajuda-import {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .ajuda-import code {
+    color: var(--steel-2);
+    font-size: 10px;
+  }
+  .import-resumo {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .import-resumo-tag {
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    border: 1px solid var(--hairline);
+    border-radius: 1px;
+    padding: 6px 12px;
+    color: var(--steel-2);
+  }
+  .import-linhas {
+    font-size: 11px;
+    color: var(--steel-3);
+    line-height: 1.8;
+    max-height: 220px;
+    overflow-y: auto;
+    border-top: 1px solid var(--hairline);
+    padding-top: 10px;
+  }
   .resumo-campanha {
     font-size: 11px;
     color: var(--muted);
@@ -394,6 +428,15 @@
       </div>
       <button class="btn-criar" id="criar-lead">Criar lead</button>
       <div class="erro-form" id="erro-form-lead"></div>
+    </div>
+
+    <div class="painel-novo">
+      <h2>Importar leads</h2>
+      <p class="ajuda-import">Cole uma linha por lead, campos separados por ponto e vírgula, nesta ordem: <code>nome do negócio; cidade; país; site; instagram; email; telefone; observações</code>. Não inclua linha de cabeçalho. Só <strong>nome do negócio</strong> é obrigatório — os demais campos podem ficar em branco. Leads com o mesmo email, telefone, ou nome+cidade de um lead já existente nesta campanha são ignorados, não sobrescritos.</p>
+      <textarea id="import-leads-texto" rows="6" placeholder="Clínica Exemplo; Lisboa; Portugal; https://exemplo.pt; @clinicaexemplo; contato@exemplo.pt; +351900000000; Encontrada via pesquisa manual"></textarea>
+      <button class="btn-criar" id="importar-leads" style="margin-top:10px">Importar leads</button>
+      <div class="erro-form" id="erro-form-import"></div>
+      <div id="import-resultado" style="display:none; margin-top:14px;"></div>
     </div>
 
     <div class="bar">
@@ -728,6 +771,10 @@ function abrirLeadsDaCampanha(campanha) {
   document.getElementById('novo-lead-googleMapsUrl').value = '';
   document.getElementById('novo-lead-observacoes').value = '';
 
+  document.getElementById('import-leads-texto').value = '';
+  document.getElementById('erro-form-import').style.display = 'none';
+  document.getElementById('import-resultado').style.display = 'none';
+
   sectionId.textContent = 'Painel / Leads';
   viewCampanhas.style.display = 'none';
   viewLeads.style.display = 'block';
@@ -805,6 +852,54 @@ document.getElementById('criar-lead').addEventListener('click', async () => {
     document.getElementById('novo-lead-telefone').value = '';
     document.getElementById('novo-lead-googleMapsUrl').value = '';
     document.getElementById('novo-lead-observacoes').value = '';
+
+    leadPaginaAtual = 1;
+    carregarLeads();
+  } catch (err) {
+    erroForm.textContent = err.message;
+    erroForm.style.display = 'block';
+  }
+});
+
+document.getElementById('importar-leads').addEventListener('click', async () => {
+  if (!campanhaAtual) return;
+  const erroForm = document.getElementById('erro-form-import');
+  const resultado = document.getElementById('import-resultado');
+  erroForm.style.display = 'none';
+  resultado.style.display = 'none';
+
+  const texto = document.getElementById('import-leads-texto').value;
+
+  try {
+    const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível importar.');
+
+    const { summary, results } = body.data;
+
+    const detalhes = results
+      .filter(r => r.status !== 'created')
+      .map(r => `linha ${r.line}: ${r.status === 'skipped' ? 'ignorada (duplicada)' : 'erro'} — ${escapeHtml(r.reason)}`)
+      .join('<br>');
+
+    resultado.innerHTML = `
+      <div class="import-resumo">
+        <span class="import-resumo-tag">Total: ${summary.total}</span>
+        <span class="import-resumo-tag">Criados: ${summary.created}</span>
+        <span class="import-resumo-tag">Duplicados: ${summary.skipped}</span>
+        <span class="import-resumo-tag">Erros: ${summary.errors}</span>
+      </div>
+      ${detalhes ? `<div class="import-linhas">${detalhes}</div>` : ''}
+    `;
+    resultado.style.display = 'block';
+
+    if (summary.created > 0) {
+      document.getElementById('import-leads-texto').value = '';
+    }
 
     leadPaginaAtual = 1;
     carregarLeads();

@@ -372,3 +372,185 @@ describe('PATCH /api/radar/campaigns/:campaignId/leads/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /api/radar/campaigns/:campaignId/leads/import', () => {
+  async function importar(campaignId, texto) {
+    return request(app)
+      .post(`/api/radar/campaigns/${campaignId}/leads/import`)
+      .set(AUTH)
+      .send({ texto });
+  }
+
+  test('401 sem admin key', async () => {
+    const campanha = await criarCampanha();
+    const res = await request(app)
+      .post(`/api/radar/campaigns/${campanha._id}/leads/import`)
+      .send({ texto: 'Clínica Teste; Lisboa' });
+
+    expect(res.status).toBe(401);
+  });
+
+  test('importa múltiplas linhas válidas', async () => {
+    const campanha = await criarCampanha();
+    const texto = [
+      'Clínica A; Lisboa; Portugal; https://a.pt; @clinicaa; a@a.pt; +351900000001; Nota A',
+      'Clínica B; Porto; Portugal; https://b.pt; @clinicab; b@b.pt; +351900000002; Nota B',
+    ].join('\n');
+
+    const res = await importar(campanha._id, texto);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.summary).toEqual({ total: 2, created: 2, skipped: 0, errors: 0 });
+    expect(res.body.data.results).toHaveLength(2);
+    expect(res.body.data.results[0].status).toBe('created');
+    expect(res.body.data.results[0].lead.nomeEmpresa).toBe('Clínica A');
+    expect(res.body.data.results[0].lead.email).toBe('a@a.pt');
+    expect(res.body.data.results[1].lead.nomeEmpresa).toBe('Clínica B');
+
+    const lista = await request(app).get(`/api/radar/campaigns/${campanha._id}/leads`).set(AUTH);
+    expect(lista.body.meta.total).toBe(2);
+  });
+
+  test('campos ausentes viram string vazia, só nomeEmpresa é obrigatório', async () => {
+    const campanha = await criarCampanha();
+    const res = await importar(campanha._id, 'Clínica Mínima');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.summary).toEqual({ total: 1, created: 1, skipped: 0, errors: 0 });
+    const lead = res.body.data.results[0].lead;
+    expect(lead.nomeEmpresa).toBe('Clínica Mínima');
+    expect(lead.cidade).toBe('');
+    expect(lead.pais).toBe('');
+    expect(lead.site).toBe('');
+    expect(lead.instagram).toBe('');
+    expect(lead.email).toBe('');
+    expect(lead.telefone).toBe('');
+    expect(lead.observacoes).toBe('');
+  });
+
+  test('linha sem nomeEmpresa vira erro e não cria lead', async () => {
+    const campanha = await criarCampanha();
+    const texto = [
+      'Clínica Válida; Lisboa',
+      '; Porto; Portugal',
+    ].join('\n');
+
+    const res = await importar(campanha._id, texto);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.summary).toEqual({ total: 2, created: 1, skipped: 0, errors: 1 });
+    expect(res.body.data.results[1].status).toBe('error');
+    expect(res.body.data.results[1].line).toBe(2);
+
+    const lista = await request(app).get(`/api/radar/campaigns/${campanha._id}/leads`).set(AUTH);
+    expect(lista.body.meta.total).toBe(1);
+  });
+
+  test('observações com ponto e vírgula não quebram o parsing', async () => {
+    const campanha = await criarCampanha();
+    const texto = 'Clínica X; Lisboa; Portugal; ; ; ; ; Ligou às 10h; disse que vai retornar; interessada';
+
+    const res = await importar(campanha._id, texto);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.results[0].lead.observacoes).toBe('Ligou às 10h; disse que vai retornar; interessada');
+  });
+
+  test('dedupe dentro do mesmo lote — segunda ocorrência de nomeEmpresa+cidade é ignorada', async () => {
+    const campanha = await criarCampanha();
+    const texto = [
+      'Clínica Repetida; Lisboa',
+      'Clínica Repetida; Lisboa',
+    ].join('\n');
+
+    const res = await importar(campanha._id, texto);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.summary).toEqual({ total: 2, created: 1, skipped: 1, errors: 0 });
+    expect(res.body.data.results[1].status).toBe('skipped');
+  });
+
+  test('dedupe contra lead já existente por email', async () => {
+    const campanha = await criarCampanha();
+    const existente = await criarLead(campanha._id, {
+      nomeEmpresa: 'Clínica Original',
+      email: 'contato@original.pt',
+    });
+
+    const res = await importar(
+      campanha._id,
+      'Clínica Diferente; Outra Cidade; ; ; ; contato@original.pt; ; '
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.summary).toEqual({ total: 1, created: 0, skipped: 1, errors: 0 });
+
+    const detalhe = await request(app)
+      .get(`/api/radar/campaigns/${campanha._id}/leads/${existente._id}`)
+      .set(AUTH);
+    expect(detalhe.body.data.nomeEmpresa).toBe('Clínica Original');
+  });
+
+  test('dedupe contra lead já existente por telefone', async () => {
+    const campanha = await criarCampanha();
+    await criarLead(campanha._id, {
+      nomeEmpresa: 'Clínica Original',
+      telefone: '+351900000099',
+    });
+
+    const res = await importar(
+      campanha._id,
+      'Clínica Diferente; ; ; ; ; ; +351900000099; '
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.summary).toEqual({ total: 1, created: 0, skipped: 1, errors: 0 });
+  });
+
+  test('isolamento: mesmo nomeEmpresa+cidade em outra campanha não é tratado como duplicata', async () => {
+    const campanhaA = await criarCampanha({ produto: 'Produto A' });
+    const campanhaB = await criarCampanha({ produto: 'Produto B' });
+    await criarLead(campanhaA._id, { nomeEmpresa: 'Clínica Comum', cidade: 'Lisboa' });
+
+    const res = await importar(campanhaB._id, 'Clínica Comum; Lisboa');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.summary).toEqual({ total: 1, created: 1, skipped: 0, errors: 0 });
+  });
+
+  test('400 quando texto vazio', async () => {
+    const campanha = await criarCampanha();
+    const res = await importar(campanha._id, '');
+    expect(res.status).toBe(400);
+  });
+
+  test('400 quando texto ausente', async () => {
+    const campanha = await criarCampanha();
+    const res = await request(app)
+      .post(`/api/radar/campaigns/${campanha._id}/leads/import`)
+      .set(AUTH)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  test('400 quando excede o limite de linhas', async () => {
+    const campanha = await criarCampanha();
+    const texto = Array.from({ length: 501 }, (_, i) => `Lead ${i}`).join('\n');
+
+    const res = await importar(campanha._id, texto);
+    expect(res.status).toBe(400);
+  });
+
+  test('404 quando campanha não existe', async () => {
+    const res = await importar(ID_INEXISTENTE, 'Clínica Teste; Lisboa');
+    expect(res.status).toBe(404);
+  });
+
+  test('400 quando campaignId é malformado', async () => {
+    const res = await request(app)
+      .post('/api/radar/campaigns/id-invalido/leads/import')
+      .set(AUTH)
+      .send({ texto: 'Clínica Teste; Lisboa' });
+    expect(res.status).toBe(400);
+  });
+});
