@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel — Radar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #050506;
+    --steel-1: #6E7480;
+    --steel-2: #C9CDD4;
+    --steel-3: #8A9098;
+    --text: #FFFFFF;
+    --muted: #7C828C;
+    --glass: rgba(255,255,255,0.03);
+    --glass-hi: rgba(255,255,255,0.05);
+    --hairline: rgba(255,255,255,0.08);
+    --danger: #A85A5A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Space Mono', ui-monospace, monospace;
+  }
+  .wrap {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+  .top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .mark {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: .34em;
+    background: linear-gradient(100deg, #FFFFFF 0%, var(--steel-2) 28%, var(--steel-1) 52%, var(--steel-2) 74%, #FFFFFF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .section-id {
+    font-size: 10px;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+  }
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--steel-1) 12%, var(--steel-2) 50%, var(--steel-1) 88%, transparent);
+    opacity: .5;
+    margin-bottom: 34px;
+  }
+  .bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 34px;
+  }
+  .btn {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--steel-1);
+    border-radius: 2px;
+    padding: 12px 26px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--steel-2); }
+  .page-info {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .painel-novo {
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 22px;
+    margin-bottom: 34px;
+  }
+  .painel-novo h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    margin: 0 0 16px;
+    color: var(--steel-2);
+  }
+  .campo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .field-label {
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    margin-bottom: 4px;
+    display: block;
+  }
+  input[type="text"], textarea, select {
+    width: 100%;
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 9px;
+  }
+  select option { background: #0A0A0C; color: var(--text); }
+  textarea { resize: vertical; min-height: 56px; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--steel-2); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 22px;
+  }
+  .status-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 1px;
+    padding: 4px 10px;
+    margin-bottom: 12px;
+  }
+  .status-tag.ativa { color: var(--steel-2); border-color: rgba(201,205,212,0.4); }
+  .status-tag.pausada { color: var(--steel-3); border-color: rgba(138,144,152,0.32); }
+  .status-tag.encerrada { color: var(--muted); border-color: var(--hairline); }
+  .hairline {
+    height: 1px;
+    background: var(--hairline);
+    margin: 14px 0;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--steel-3);
+    margin-top: 14px;
+    margin-bottom: 10px;
+  }
+  .btn-salvar {
+    width: 100%;
+    background: transparent;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 9px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn-salvar:hover { border-color: var(--steel-2); }
+  .btn-salvar.saved { color: var(--text); border-color: var(--steel-2); }
+  .btn-criar {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--steel-1);
+    border-radius: 2px;
+    padding: 11px 24px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn-criar:hover { border-color: var(--steel-2); }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 90px 20px;
+    font-size: 12.5px;
+  }
+  .filtro-select {
+    background: var(--glass);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 10px 12px;
+    width: auto;
+  }
+  .erro-form {
+    display: none;
+    color: var(--danger);
+    font-size: 11px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="mark">IDISTØPIC <span style="opacity:.5">— Radar</span></div>
+    <div class="section-id">Painel / Campanhas</div>
+  </div>
+  <div class="rule"></div>
+
+  <div class="painel-novo">
+    <h2>Nova campanha</h2>
+    <div class="campo-grid">
+      <div>
+        <label class="field-label">Produto</label>
+        <input type="text" id="novo-produto" maxlength="120">
+      </div>
+      <div>
+        <label class="field-label">Nicho</label>
+        <input type="text" id="novo-nicho" maxlength="120">
+      </div>
+      <div>
+        <label class="field-label">Cidade</label>
+        <input type="text" id="novo-cidade" maxlength="120">
+      </div>
+    </div>
+    <div class="campo-grid" style="grid-template-columns: 1fr;">
+      <div>
+        <label class="field-label">Objetivo</label>
+        <textarea id="novo-objetivo" maxlength="500"></textarea>
+      </div>
+      <div>
+        <label class="field-label">Descrição (opcional)</label>
+        <textarea id="novo-descricao" maxlength="1000"></textarea>
+      </div>
+    </div>
+    <button class="btn-criar" id="criar-campanha">Criar campanha</button>
+    <div class="erro-form" id="erro-form"></div>
+  </div>
+
+  <div class="bar">
+    <select id="filtro-status" class="filtro-select">
+      <option value="">Todos os status</option>
+    </select>
+    <button class="btn" id="aplicar-filtros">Aplicar filtros</button>
+    <button class="btn" id="limpar-filtros">Limpar filtros</button>
+  </div>
+
+  <div class="bar">
+    <button class="btn" id="anterior">Anterior</button>
+    <span class="page-info" id="page-info"></span>
+    <button class="btn" id="proxima">Próxima</button>
+    <button class="btn" id="sair" style="margin-left:auto">Sair</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">Carregando...</div>
+
+</div>
+
+<script>
+const STATUSES = ['ativa', 'pausada', 'encerrada'];
+const STATUS_LABELS = {
+  ativa: 'Ativa',
+  pausada: 'Pausada',
+  encerrada: 'Encerrada',
+};
+
+const grid = document.getElementById('grid');
+const empty = document.getElementById('empty');
+const pageInfo = document.getElementById('page-info');
+
+let paginaAtual = 1;
+const LIMITE = 20;
+let filtroStatus = '';
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+
+document.getElementById('sair').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+});
+
+document.getElementById('anterior').addEventListener('click', () => {
+  if (paginaAtual > 1) {
+    paginaAtual -= 1;
+    carregar();
+  }
+});
+
+document.getElementById('proxima').addEventListener('click', () => {
+  paginaAtual += 1;
+  carregar();
+});
+
+function popularFiltros() {
+  const selectStatus = document.getElementById('filtro-status');
+  STATUSES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = STATUS_LABELS[s] || s;
+    selectStatus.appendChild(opt);
+  });
+}
+
+document.getElementById('aplicar-filtros').addEventListener('click', () => {
+  filtroStatus = document.getElementById('filtro-status').value;
+  paginaAtual = 1;
+  carregar();
+});
+
+document.getElementById('limpar-filtros').addEventListener('click', () => {
+  document.getElementById('filtro-status').value = '';
+  filtroStatus = '';
+  paginaAtual = 1;
+  carregar();
+});
+
+document.getElementById('criar-campanha').addEventListener('click', async () => {
+  const erroForm = document.getElementById('erro-form');
+  erroForm.style.display = 'none';
+
+  const payload = {
+    produto: document.getElementById('novo-produto').value.trim(),
+    nicho: document.getElementById('novo-nicho').value.trim(),
+    cidade: document.getElementById('novo-cidade').value.trim(),
+    objetivo: document.getElementById('novo-objetivo').value.trim(),
+    descricao: document.getElementById('novo-descricao').value.trim(),
+  };
+
+  try {
+    const res = await fetch('/api/radar/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível criar a campanha.');
+
+    document.getElementById('novo-produto').value = '';
+    document.getElementById('novo-nicho').value = '';
+    document.getElementById('novo-cidade').value = '';
+    document.getElementById('novo-objetivo').value = '';
+    document.getElementById('novo-descricao').value = '';
+
+    paginaAtual = 1;
+    carregar();
+  } catch (err) {
+    erroForm.textContent = err.message;
+    erroForm.style.display = 'block';
+  }
+});
+
+async function carregar() {
+  try {
+    const params = new URLSearchParams({ page: paginaAtual, limit: LIMITE });
+    if (filtroStatus) params.set('status', filtroStatus);
+
+    const res = await fetch(`/api/radar/campaigns?${params.toString()}`);
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível carregar.');
+    render(body.data, body.meta);
+  } catch (err) {
+    grid.innerHTML = '';
+    empty.textContent = err.message;
+    empty.style.display = 'block';
+  }
+}
+
+function render(campanhas, meta) {
+  const totalPaginas = Math.max(Math.ceil(meta.total / meta.limit), 1);
+  pageInfo.textContent = `página ${meta.page} de ${totalPaginas} — ${meta.total} campanha(s)`;
+
+  if (!campanhas.length) {
+    grid.innerHTML = '';
+    empty.textContent = 'Nenhuma campanha encontrada.';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  grid.innerHTML = campanhas.map(c => {
+    const criado = c.createdAt ? new Date(c.createdAt).toLocaleString('pt-PT') : '';
+    const status = c.status || 'ativa';
+    const statusOptions = STATUSES.map(s =>
+      `<option value="${s}" ${s === status ? 'selected' : ''}>${escapeHtml(STATUS_LABELS[s] || s)}</option>`
+    ).join('');
+
+    return `
+      <div class="card" data-id="${c._id}">
+        <div class="status-tag ${status}">${escapeHtml(STATUS_LABELS[status] || status)}</div>
+
+        <div class="field-label">Produto</div>
+        <input type="text" class="campo-produto" data-id="${c._id}" value="${escapeHtml(c.produto)}" maxlength="120">
+
+        <div class="hairline"></div>
+
+        <div class="field-label">Nicho</div>
+        <input type="text" class="campo-nicho" data-id="${c._id}" value="${escapeHtml(c.nicho)}" maxlength="120">
+
+        <div class="field-label" style="margin-top:10px">Cidade</div>
+        <input type="text" class="campo-cidade" data-id="${c._id}" value="${escapeHtml(c.cidade)}" maxlength="120">
+
+        <div class="field-label" style="margin-top:10px">Objetivo</div>
+        <textarea class="campo-objetivo" data-id="${c._id}" maxlength="500">${escapeHtml(c.objetivo)}</textarea>
+
+        <div class="field-label" style="margin-top:10px">Descrição</div>
+        <textarea class="campo-descricao" data-id="${c._id}" maxlength="1000">${escapeHtml(c.descricao)}</textarea>
+
+        <div class="field-label" style="margin-top:10px">Status</div>
+        <select class="campo-status" data-id="${c._id}">${statusOptions}</select>
+
+        <div class="meta-row"><span>${criado}</span></div>
+
+        <button class="btn-salvar" data-id="${c._id}">Salvar alterações</button>
+      </div>
+    `;
+  }).join('');
+
+  bindEvents();
+}
+
+function bindEvents() {
+  document.querySelectorAll('.btn-salvar').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const card = btn.closest('.card');
+
+      const payload = {
+        produto: card.querySelector('.campo-produto').value.trim(),
+        nicho: card.querySelector('.campo-nicho').value.trim(),
+        cidade: card.querySelector('.campo-cidade').value.trim(),
+        objetivo: card.querySelector('.campo-objetivo').value.trim(),
+        descricao: card.querySelector('.campo-descricao').value.trim(),
+        status: card.querySelector('.campo-status').value,
+      };
+
+      try {
+        const res = await fetch(`/api/radar/campaigns/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error?.message || 'Falha ao salvar.');
+
+        const statusTag = card.querySelector('.status-tag');
+        statusTag.textContent = STATUS_LABELS[payload.status] || payload.status;
+        statusTag.className = `status-tag ${payload.status}`;
+
+        btn.classList.add('saved');
+        btn.textContent = 'Salvo';
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.textContent = 'Salvar alterações';
+        }, 1600);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  popularFiltros();
+  carregar();
+});
+</script>
+</body>
+</html>

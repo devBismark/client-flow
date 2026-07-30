@@ -3,6 +3,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const projectRoutes = require('./src/routes/projectRoutes');
 const diagnosticRoutes = require('./src/routes/diagnosticRoutes');
+const radarRoutes = require('./src/routes/radarRoutes');
 const { notFound, errorHandler } = require('./src/middlewares/errorHandler');
 const { requireAdminSession, timingSafeEqual } = require('./src/middlewares/auth');
 const { createRateLimiter } = require('./src/middlewares/rateLimiter');
@@ -10,6 +11,11 @@ const { createRateLimiter } = require('./src/middlewares/rateLimiter');
 const projectsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 });
 const diagnosticsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 });
 const loginRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+const radarRateLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  methods: ['GET', 'POST', 'PATCH'],
+});
 
 const app = express();
 app.use(express.json());
@@ -46,6 +52,10 @@ app.get('/admin-diagnostico.html', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-diagnostico.html'));
 });
 
+app.get('/admin-radar.html', requireAdminSession, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-radar.html'));
+});
+
 app.get('/diagnostico', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'diagnostico.html'));
 });
@@ -58,6 +68,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api/projects', projectsRateLimiter, projectRoutes);
 app.use('/api/diagnostics', diagnosticsRateLimiter, diagnosticRoutes);
+app.use('/api/radar/campaigns', radarRateLimiter, radarRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
