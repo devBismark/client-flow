@@ -1400,3 +1400,126 @@ describe('public/admin-radar.html — reorganização do fluxo (UX operacional)'
     expect(html).not.toMatch(/document\.querySelectorAll\('\.analise-toggle'\)/);
   });
 });
+
+describe('public/admin-radar.html — busca automática (Corte 13, provider mockado)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const vm = require('vm');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin-radar.html'),
+    'utf8'
+  );
+
+  test('o bloco "1. Pesquisar oportunidades" tem o botão "Buscar oportunidades" e o aviso de busca mockada', () => {
+    expect(html).toContain('id="buscar-oportunidades"');
+    expect(html).toContain('Buscar oportunidades');
+    expect(html).toMatch(/Busca mockada para validar o fluxo\. Integra[çc][ãa]o real vem depois\./);
+    expect(html).toContain('busca-resultado');
+    expect(html).toContain('busca-grid');
+  });
+
+  test('cada card de sugestão tem "Salvar como lead" e "Descartar"', () => {
+    expect(html).toContain('btn-salvar-sugestao');
+    expect(html).toContain('Salvar como lead');
+    expect(html).toContain('btn-descartar-sugestao');
+    expect(html).toContain('>Descartar<');
+  });
+
+  test('sugestão duplicada é sinalizada visualmente ("já existe nesta campanha")', () => {
+    expect(html).toMatch(/duplicado[\s\S]{0,200}Já existe nesta campanha/);
+  });
+
+  test('"Salvar como lead" usa o endpoint de criação de lead já existente (POST .../leads), não um endpoint novo', () => {
+    const idxHandler = html.indexOf("querySelectorAll('.btn-salvar-sugestao')");
+    const idxNovaFuncao = html.indexOf("querySelectorAll('.btn-descartar-sugestao')");
+
+    expect(idxHandler).toBeGreaterThan(-1);
+    expect(idxNovaFuncao).toBeGreaterThan(idxHandler);
+
+    const trecho = html.slice(idxHandler, idxNovaFuncao);
+    expect(trecho).toContain('${campanhaAtual.id}/leads`');
+    expect(trecho).toContain("method: 'POST'");
+    expect(trecho).not.toContain('/search`');
+  });
+
+  test('a busca nunca remove pesquisa assistida, captura assistida, Avançado, análise do lead ou mensagem assistida', () => {
+    expect(html).toContain('pesquisa-lista');
+    expect(html).toContain('gerarConsultasPesquisa');
+    expect(html).toContain('captura-previa');
+    expect(html).toContain('extrairPreviaLead');
+    expect(html).toContain('id="avancado-toggle"');
+    expect(html).toContain('Avançado: importar lista em lote');
+    expect(html).toContain('Avançado: criar lead manual');
+    expect(html).toContain('Análise do lead');
+    expect(html).toContain('campo-analise');
+    expect(html).toContain('Mensagem assistida');
+    expect(html).toContain('gerarMensagemAssistida');
+  });
+
+  // Mesma técnica usada nas demais seções assistidas: sem jsdom, o próprio
+  // <script> é executado num sandbox `vm` com um `document` mínimo para
+  // confirmar que o botão "Buscar oportunidades" é vinculado uma única vez,
+  // fora de qualquer função de re-render (mesma disciplina aplicada ao
+  // toggle "Avançado" no Corte 12, para não acumular listener).
+  function carregarScriptCliente() {
+    const match = html.match(/<script>([\s\S]*?)<\/script>/);
+    const code = match[1];
+
+    function makeEl() {
+      return {
+        value: '', textContent: '', innerHTML: '', className: '', style: {}, dataset: {},
+        classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+        addEventListener() {},
+        appendChild() {},
+        querySelector() { return makeEl(); },
+        querySelectorAll() { return []; },
+        closest() { return makeEl(); },
+      };
+    }
+
+    const fakeDocument = {
+      getElementById() { return makeEl(); },
+      createElement() { return makeEl(); },
+      addEventListener() {},
+      querySelectorAll() { return []; },
+    };
+
+    const sandbox = {
+      document: fakeDocument,
+      window: {},
+      navigator: { clipboard: { writeText: async () => {} } },
+      fetch: async () => ({ ok: true, json: async () => ({ data: { sugestoes: [] } }) }),
+      console,
+      URLSearchParams,
+      setTimeout,
+      alert: () => {},
+    };
+
+    vm.createContext(sandbox);
+    vm.runInContext(code, sandbox, { filename: 'admin-radar-script.js' });
+    return sandbox;
+  }
+
+  test('o script carrega sem erro e expõe renderSugestoesBusca/bindEventsBusca', () => {
+    const sandbox = carregarScriptCliente();
+    expect(typeof sandbox.renderSugestoesBusca).toBe('function');
+    expect(typeof sandbox.bindEventsBusca).toBe('function');
+  });
+
+  test('o binding do botão "buscar-oportunidades" é feito uma única vez, fora de bindEventsBusca (função fechada antes dele)', () => {
+    const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+    const bindingTexto = "document.getElementById('buscar-oportunidades')";
+    const idxFuncao = scriptMatch.indexOf('function bindEventsBusca()');
+    const idxBinding = scriptMatch.indexOf(bindingTexto);
+
+    expect(idxFuncao).toBeGreaterThan(-1);
+    expect(idxBinding).toBeGreaterThan(idxFuncao);
+
+    // Entre o fim do corpo de bindEventsBusca (chave de fechamento na coluna 0,
+    // seguida de linha em branco) e o binding do botão, não deve haver nenhuma
+    // outra abertura de função — ou seja, o binding acontece direto no
+    // top-level do script, igual a 'avancado-toggle'/'criar-lead'/'importar-leads'.
+    const trecho = scriptMatch.slice(idxFuncao, idxBinding + bindingTexto.length);
+    expect(trecho).toMatch(/\n\}\n\ndocument\.getElementById\('buscar-oportunidades'\)$/);
+  });
+});

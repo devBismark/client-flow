@@ -302,6 +302,7 @@
     padding: 6px 12px;
     color: var(--steel-2);
   }
+  .import-resumo-tag.duplicado { color: var(--danger); border-color: var(--danger); }
   .import-linhas {
     font-size: 11px;
     color: var(--steel-3);
@@ -502,6 +503,17 @@
       <h2>1. Pesquisar oportunidades</h2>
       <p class="ajuda-import">Pesquise, copie os dados encontrados e cole em <strong>2. Capturar lead</strong> abaixo. Nenhuma busca é feita automaticamente por aqui.</p>
       <div id="pesquisa-lista"></div>
+
+      <div class="hairline"></div>
+      <p class="ajuda-import">Busca mockada para validar o fluxo. Integração real vem depois. Nenhuma chamada externa é feita e nenhum lead é salvo automaticamente — revise cada sugestão antes de salvar.</p>
+      <button class="btn-criar" id="buscar-oportunidades" type="button">Buscar oportunidades</button>
+      <div class="empty" id="busca-carregando" style="display:none; padding:24px 0;">Buscando...</div>
+      <div class="erro-form" id="erro-form-busca"></div>
+
+      <div id="busca-resultado" style="display:none; margin-top:18px;">
+        <div class="resumo-campanha" id="busca-resumo"></div>
+        <div class="grid" id="busca-grid" style="margin-top:12px;"></div>
+      </div>
     </div>
 
     <div class="painel-novo">
@@ -985,6 +997,7 @@ let leadPaginaAtual = 1;
 const LEAD_LIMITE = 20;
 let filtroLeadStatus = '';
 let filtroLeadPrioridade = '';
+let sugestoesBusca = [];
 
 /* ---------- Pesquisa assistida ---------- */
 
@@ -1051,6 +1064,166 @@ function bindEventsPesquisa() {
     });
   });
 }
+
+/* ---------- Busca automática (Corte 13 — provider mockado) ---------- */
+
+function renderSugestoesBusca() {
+  const resultado = document.getElementById('busca-resultado');
+  const resumo = document.getElementById('busca-resumo');
+  const grid = document.getElementById('busca-grid');
+
+  if (sugestoesBusca.length === 0) {
+    resultado.style.display = 'none';
+    return;
+  }
+
+  const visiveis = sugestoesBusca.filter(s => !s.salva && !s.descartada);
+
+  resultado.style.display = 'block';
+  resumo.innerHTML = `<strong>${visiveis.length}</strong> sugestão(ões) para revisar de ${sugestoesBusca.length} geradas (fonte: mock).`;
+
+  if (visiveis.length === 0) {
+    grid.innerHTML = '<p class="pesquisa-vazio">Todas as sugestões desta busca foram salvas ou descartadas.</p>';
+    return;
+  }
+
+  grid.innerHTML = sugestoesBusca.map((sugestao, idx) => {
+    if (sugestao.salva || sugestao.descartada) return '';
+
+    return `
+      <div class="card" data-idx="${idx}">
+        <h3>${escapeHtml(sugestao.nomeEmpresa)}</h3>
+        <div class="import-resumo">
+          <span class="import-resumo-tag">Fonte: mock</span>
+          ${sugestao.duplicado ? '<span class="import-resumo-tag duplicado">Já existe nesta campanha</span>' : ''}
+        </div>
+
+        <div class="hairline"></div>
+
+        <div class="campo-grid">
+          <div>
+            <label class="field-label">Nome da empresa</label>
+            <input type="text" class="busca-nomeEmpresa" value="${escapeHtml(sugestao.nomeEmpresa)}" maxlength="120">
+          </div>
+          <div>
+            <label class="field-label">Cidade</label>
+            <input type="text" class="busca-cidade" value="${escapeHtml(sugestao.cidade)}" maxlength="120">
+          </div>
+          <div>
+            <label class="field-label">País</label>
+            <input type="text" class="busca-pais" value="${escapeHtml(sugestao.pais)}" maxlength="120">
+          </div>
+          <div>
+            <label class="field-label">Site</label>
+            <input type="text" class="busca-site" value="${escapeHtml(sugestao.site)}" maxlength="300">
+          </div>
+          <div>
+            <label class="field-label">Instagram</label>
+            <input type="text" class="busca-instagram" value="${escapeHtml(sugestao.instagram)}" maxlength="200">
+          </div>
+          <div>
+            <label class="field-label">Email</label>
+            <input type="text" class="busca-email" value="${escapeHtml(sugestao.email)}" maxlength="200">
+          </div>
+          <div>
+            <label class="field-label">Telefone</label>
+            <input type="text" class="busca-telefone" value="${escapeHtml(sugestao.telefone)}" maxlength="60">
+          </div>
+          <div>
+            <label class="field-label">Google Maps</label>
+            <input type="text" class="busca-googleMapsUrl" value="${escapeHtml(sugestao.googleMapsUrl)}" maxlength="500">
+          </div>
+        </div>
+        <div class="campo-grid" style="grid-template-columns: 1fr;">
+          <div>
+            <label class="field-label">Observações</label>
+            <textarea class="busca-observacoes" maxlength="2000">${escapeHtml(sugestao.observacoes)}</textarea>
+          </div>
+        </div>
+
+        <button class="btn-criar btn-salvar-sugestao" data-idx="${idx}">Salvar como lead</button>
+        <button class="btn-secundario btn-descartar-sugestao" data-idx="${idx}" type="button">Descartar</button>
+        <div class="erro-form" id="erro-busca-${idx}"></div>
+      </div>
+    `;
+  }).join('');
+
+  bindEventsBusca();
+}
+
+function bindEventsBusca() {
+  document.querySelectorAll('.btn-salvar-sugestao').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!campanhaAtual) return;
+      const idx = Number(btn.dataset.idx);
+      const card = btn.closest('.card');
+      const erroForm = document.getElementById(`erro-busca-${idx}`);
+      erroForm.style.display = 'none';
+
+      const payload = {
+        nomeEmpresa: card.querySelector('.busca-nomeEmpresa').value.trim(),
+        cidade: card.querySelector('.busca-cidade').value.trim(),
+        pais: card.querySelector('.busca-pais').value.trim(),
+        site: card.querySelector('.busca-site').value.trim(),
+        instagram: card.querySelector('.busca-instagram').value.trim(),
+        email: card.querySelector('.busca-email').value.trim(),
+        telefone: card.querySelector('.busca-telefone').value.trim(),
+        googleMapsUrl: card.querySelector('.busca-googleMapsUrl').value.trim(),
+        observacoes: card.querySelector('.busca-observacoes').value.trim(),
+      };
+
+      try {
+        const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error?.message || 'Não foi possível salvar o lead.');
+
+        sugestoesBusca[idx].salva = true;
+        renderSugestoesBusca();
+
+        leadPaginaAtual = 1;
+        carregarLeads();
+      } catch (err) {
+        erroForm.textContent = err.message;
+        erroForm.style.display = 'block';
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-descartar-sugestao').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.idx);
+      sugestoesBusca[idx].descartada = true;
+      renderSugestoesBusca();
+    });
+  });
+}
+
+document.getElementById('buscar-oportunidades').addEventListener('click', async () => {
+  if (!campanhaAtual) return;
+  const erroForm = document.getElementById('erro-form-busca');
+  const carregando = document.getElementById('busca-carregando');
+  erroForm.style.display = 'none';
+  document.getElementById('busca-resultado').style.display = 'none';
+  carregando.style.display = 'block';
+
+  try {
+    const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/search`, { method: 'POST' });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível buscar oportunidades.');
+
+    sugestoesBusca = body.data.sugestoes.map(s => ({ ...s, salva: false, descartada: false }));
+    renderSugestoesBusca();
+  } catch (err) {
+    erroForm.textContent = err.message;
+    erroForm.style.display = 'block';
+  } finally {
+    carregando.style.display = 'none';
+  }
+});
 
 /* ---------- Captura assistida ---------- */
 
@@ -1182,6 +1355,11 @@ function abrirLeadsDaCampanha(campanha) {
   `;
 
   renderPesquisaAssistida(campanha);
+
+  sugestoesBusca = [];
+  document.getElementById('busca-resultado').style.display = 'none';
+  document.getElementById('erro-form-busca').style.display = 'none';
+  document.getElementById('busca-carregando').style.display = 'none';
 
   document.getElementById('captura-texto').value = '';
   document.getElementById('captura-previa').style.display = 'none';
