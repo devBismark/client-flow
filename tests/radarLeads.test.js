@@ -681,6 +681,27 @@ describe('PATCH /api/radar/campaigns/:campaignId/leads/:id — mensagem assistid
     expect(res.body.data.status).toBe('mensagem_gerada');
   });
 
+  test('reproduz o bug relatado: mensagem + status "analisado" reenviado igual ao atual ainda avança para "mensagem_gerada"', async () => {
+    // Reproduz o payload real do admin-radar.html: se o formulário reenviar o
+    // status atual junto da mensagem, isso não pode ser tratado como troca
+    // explícita — mesma classe de bug já corrigida para a análise manual.
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ status: 'analisado' });
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ mensagemGerada: 'Mensagem sugerida.', mensagemCanal: 'whatsapp', status: 'analisado' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('mensagem_gerada');
+  });
+
   test('status explícito diferente prevalece sobre o avanço automático da mensagem', async () => {
     const campanha = await criarCampanha();
     const lead = await criarLead(campanha._id);
