@@ -2,7 +2,7 @@ const express = require('express');
 const { RadarCampaign } = require('../models/RadarCampaign');
 const { RadarLead } = require('../models/RadarLead');
 const { requireAdminKey } = require('../middlewares/auth');
-const { buscarOportunidadesMock } = require('../services/radarSearchService');
+const { buscarOportunidades } = require('../services/radarSearchService');
 const router = express.Router({ mergeParams: true });
 
 function maskIp(ip) {
@@ -32,11 +32,13 @@ function normalize(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-// POST /api/radar/campaigns/:campaignId/search — admin, gera sugestões mockadas de lead
-// (Corte 13: Busca Automática v1, provider mockado — nenhuma chamada externa,
-// nenhuma persistência). Sugestões duplicadas contra leads já existentes na
-// campanha só são sinalizadas (`duplicado: true`), nunca bloqueadas — a decisão
-// de salvar ou não continua sendo do operador via POST /leads já existente.
+// POST /api/radar/campaigns/:campaignId/search — admin, gera sugestões de lead.
+// Provider mockado por padrão (Corte 13); Google Places real só se
+// RADAR_SEARCH_PROVIDER=google_places e GOOGLE_PLACES_API_KEY existirem
+// (Corte 14) — nunca persiste nada em nenhum dos dois casos. Sugestões
+// duplicadas contra leads já existentes na campanha só são sinalizadas
+// (`duplicado: true`), nunca bloqueadas — a decisão de salvar ou não continua
+// sendo do operador via POST /leads já existente.
 router.post('/', requireAdminKey, async (req, res, next) => {
   try {
     const campaign = await RadarCampaign.findById(req.params.campaignId);
@@ -44,7 +46,24 @@ router.post('/', requireAdminKey, async (req, res, next) => {
       return res.status(404).json({ error: { message: 'Campanha não encontrada' } });
     }
 
-    const sugestoesBrutas = buscarOportunidadesMock(campaign);
+    let resultadoBusca;
+    try {
+      resultadoBusca = await buscarOportunidades(campaign);
+    } catch (erroBusca) {
+      // Erro do provider (chave ausente, rede fora, erro HTTP do Google) —
+      // nunca cai para o mock em silêncio; retorna erro claro e seguro
+      // (mensagem já vem sem chave/resposta bruta desde o provider).
+      logAudit('radar_search_failed', {
+        campaignId: String(campaign._id),
+        provider: erroBusca.provider || 'desconhecido',
+        ip: maskIp(req.ip),
+      });
+      return res.status(erroBusca.status || 502).json({
+        error: { message: erroBusca.message || 'Não foi possível buscar oportunidades.' },
+      });
+    }
+
+    const { sugestoes: sugestoesBrutas, provider } = resultadoBusca;
 
     const existentes = await RadarLead.find({ campaign_id: campaign._id })
       .select('nomeEmpresa cidade email telefone')
@@ -71,12 +90,13 @@ router.post('/', requireAdminKey, async (req, res, next) => {
 
     logAudit('radar_search_performed', {
       campaignId: String(campaign._id),
+      provider,
       total: sugestoes.length,
       duplicados: sugestoes.filter((s) => s.duplicado).length,
       ip: maskIp(req.ip),
     });
 
-    res.json({ data: { sugestoes } });
+    res.json({ data: { sugestoes, provider } });
   } catch (error) {
     next(error);
   }

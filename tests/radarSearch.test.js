@@ -4,7 +4,7 @@ require('./setup');
 
 const request = require('supertest');
 const app = require('../app');
-const { buscarOportunidadesMock, MAX_SUGGESTIONS } = require('../src/services/radarSearchService');
+const { buscarOportunidadesMock, buscarOportunidades, MAX_SUGGESTIONS } = require('../src/services/radarSearchService');
 
 const AUTH = { 'x-admin-key': 'test-key' };
 const ID_INEXISTENTE = '64b000000000000000000000';
@@ -180,6 +180,182 @@ describe('POST /api/radar/campaigns/:campaignId/search', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.sugestoes[0].duplicado).toBe(false);
+  });
+
+  describe('com RADAR_SEARCH_PROVIDER=google_places (fetch sempre mockado, nunca rede real)', () => {
+    const envOriginal = {
+      RADAR_SEARCH_PROVIDER: process.env.RADAR_SEARCH_PROVIDER,
+      GOOGLE_PLACES_API_KEY: process.env.GOOGLE_PLACES_API_KEY,
+    };
+    const fetchOriginal = global.fetch;
+
+    afterEach(() => {
+      if (envOriginal.RADAR_SEARCH_PROVIDER === undefined) delete process.env.RADAR_SEARCH_PROVIDER;
+      else process.env.RADAR_SEARCH_PROVIDER = envOriginal.RADAR_SEARCH_PROVIDER;
+
+      if (envOriginal.GOOGLE_PLACES_API_KEY === undefined) delete process.env.GOOGLE_PLACES_API_KEY;
+      else process.env.GOOGLE_PLACES_API_KEY = envOriginal.GOOGLE_PLACES_API_KEY;
+
+      global.fetch = fetchOriginal;
+      jest.restoreAllMocks();
+    });
+
+    test('retorna sugestões com fonte "google_places" e não persiste nenhum lead', async () => {
+      process.env.RADAR_SEARCH_PROVIDER = 'google_places';
+      process.env.GOOGLE_PLACES_API_KEY = 'chave-teste-rota';
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          places: [{ id: 'p1', displayName: { text: 'Negócio Google Rota' } }],
+        }),
+      });
+
+      const campanha = await criarCampanha();
+
+      const res = await request(app)
+        .post(`/api/radar/campaigns/${campanha._id}/search`)
+        .set(AUTH);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.provider).toBe('google_places');
+      expect(res.body.data.sugestoes[0].fonte).toBe('google_places');
+      expect(res.body.data.sugestoes[0].nomeEmpresa).toBe('Negócio Google Rota');
+
+      const lista = await request(app)
+        .get(`/api/radar/campaigns/${campanha._id}/leads`)
+        .set(AUTH);
+      expect(lista.body.meta.total).toBe(0);
+    });
+
+    test('erro do provider real (chave ausente) retorna erro claro na rota, sem persistir nada', async () => {
+      process.env.RADAR_SEARCH_PROVIDER = 'google_places';
+      delete process.env.GOOGLE_PLACES_API_KEY;
+      global.fetch = jest.fn();
+
+      const campanha = await criarCampanha();
+
+      const res = await request(app)
+        .post(`/api/radar/campaigns/${campanha._id}/search`)
+        .set(AUTH);
+
+      expect(res.status).toBe(500);
+      expect(res.body.error.message).toMatch(/GOOGLE_PLACES_API_KEY/);
+      expect(global.fetch).not.toHaveBeenCalled();
+
+      const lista = await request(app)
+        .get(`/api/radar/campaigns/${campanha._id}/leads`)
+        .set(AUTH);
+      expect(lista.body.meta.total).toBe(0);
+    });
+
+    test('erro HTTP do Google retorna 502 claro na rota, sem persistir nada', async () => {
+      process.env.RADAR_SEARCH_PROVIDER = 'google_places';
+      process.env.GOOGLE_PLACES_API_KEY = 'chave-teste-rota';
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        json: async () => ({ error: { message: 'quota exceeded' } }),
+      });
+
+      const campanha = await criarCampanha();
+
+      const res = await request(app)
+        .post(`/api/radar/campaigns/${campanha._id}/search`)
+        .set(AUTH);
+
+      expect(res.status).toBe(502);
+      expect(res.body.error.message).not.toMatch(/quota exceeded/);
+
+      const lista = await request(app)
+        .get(`/api/radar/campaigns/${campanha._id}/leads`)
+        .set(AUTH);
+      expect(lista.body.meta.total).toBe(0);
+    });
+
+    test('nenhum log (sucesso ou erro) contém a chave configurada', async () => {
+      process.env.RADAR_SEARCH_PROVIDER = 'google_places';
+      process.env.GOOGLE_PLACES_API_KEY = 'chave-super-secreta-999';
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ places: [{ id: 'p1', displayName: { text: 'Negócio X' } }] }),
+      });
+
+      const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const campanha = await criarCampanha();
+      await request(app).post(`/api/radar/campaigns/${campanha._id}/search`).set(AUTH);
+
+      const todasAsChamadas = [...infoSpy.mock.calls, ...errorSpy.mock.calls]
+        .map((args) => args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '))
+        .join('\n');
+
+      expect(todasAsChamadas).not.toContain('chave-super-secreta-999');
+    });
+  });
+});
+
+describe('radarSearchService.buscarOportunidades() — provider switch', () => {
+  const envOriginal = {
+    RADAR_SEARCH_PROVIDER: process.env.RADAR_SEARCH_PROVIDER,
+    GOOGLE_PLACES_API_KEY: process.env.GOOGLE_PLACES_API_KEY,
+  };
+  const fetchOriginal = global.fetch;
+
+  afterEach(() => {
+    if (envOriginal.RADAR_SEARCH_PROVIDER === undefined) delete process.env.RADAR_SEARCH_PROVIDER;
+    else process.env.RADAR_SEARCH_PROVIDER = envOriginal.RADAR_SEARCH_PROVIDER;
+
+    if (envOriginal.GOOGLE_PLACES_API_KEY === undefined) delete process.env.GOOGLE_PLACES_API_KEY;
+    else process.env.GOOGLE_PLACES_API_KEY = envOriginal.GOOGLE_PLACES_API_KEY;
+
+    global.fetch = fetchOriginal;
+  });
+
+  test('usa mock por default quando RADAR_SEARCH_PROVIDER não está definido', async () => {
+    delete process.env.RADAR_SEARCH_PROVIDER;
+    delete process.env.GOOGLE_PLACES_API_KEY;
+
+    const resultado = await buscarOportunidades({ nicho: 'X', cidade: 'Y', produto: 'Z' });
+    expect(resultado.provider).toBe('mock');
+    expect(resultado.sugestoes[0].fonte).toBe('mock');
+  });
+
+  test('usa mock mesmo com GOOGLE_PLACES_API_KEY configurada, se RADAR_SEARCH_PROVIDER não for "google_places"', async () => {
+    delete process.env.RADAR_SEARCH_PROVIDER;
+    process.env.GOOGLE_PLACES_API_KEY = 'chave-teste';
+    global.fetch = jest.fn();
+
+    const resultado = await buscarOportunidades({ nicho: 'X', cidade: 'Y' });
+    expect(resultado.provider).toBe('mock');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('usa google_places quando RADAR_SEARCH_PROVIDER=google_places e a chave existe', async () => {
+    process.env.RADAR_SEARCH_PROVIDER = 'google_places';
+    process.env.GOOGLE_PLACES_API_KEY = 'chave-teste';
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ places: [{ id: 'p1', displayName: { text: 'Negócio Google' } }] }),
+    });
+
+    const resultado = await buscarOportunidades({ nicho: 'X', cidade: 'Y' });
+
+    expect(resultado.provider).toBe('google_places');
+    expect(resultado.sugestoes[0].fonte).toBe('google_places');
+    expect(resultado.sugestoes[0].nomeEmpresa).toBe('Negócio Google');
+  });
+
+  test('não cai para mock em silêncio quando RADAR_SEARCH_PROVIDER=google_places mas falta a chave — lança erro claro', async () => {
+    process.env.RADAR_SEARCH_PROVIDER = 'google_places';
+    delete process.env.GOOGLE_PLACES_API_KEY;
+    global.fetch = jest.fn();
+
+    await expect(buscarOportunidades({ nicho: 'X', cidade: 'Y' })).rejects.toMatchObject({ status: 500 });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
 

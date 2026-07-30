@@ -1522,4 +1522,41 @@ describe('public/admin-radar.html — busca automática (Corte 13, provider mock
     const trecho = scriptMatch.slice(idxFuncao, idxBinding + bindingTexto.length);
     expect(trecho).toMatch(/\n\}\n\ndocument\.getElementById\('buscar-oportunidades'\)$/);
   });
+
+  test('a tag de fonte no card e no resumo é dinâmica (provider real), não sempre "mock"', () => {
+    expect(html).toContain('FONTE_BUSCA_LABELS');
+    expect(html).toMatch(/mock:\s*'Mock'/);
+    expect(html).toMatch(/google_places:\s*'Google Places'/);
+
+    // A tag por card precisa usar a fonte da própria sugestão — não pode haver
+    // mais nenhum "Fonte: mock" fixo no template do card ou no resumo.
+    expect(html).not.toMatch(/Fonte:\s*mock</);
+    expect(html).not.toMatch(/geradas \(fonte: mock\)/);
+    expect(html).toContain('Fonte: ${escapeHtml(fonteTag)}');
+    expect(html).toContain('fonte: ${escapeHtml(fonteLabel)}');
+  });
+
+  test('o aviso de busca muda entre mock e Google Places conforme o provider retornado pela API', () => {
+    expect(html).toContain('id="busca-aviso"');
+    expect(html).toContain('AVISO_BUSCA_MOCK');
+    expect(html).toContain('AVISO_BUSCA_GOOGLE');
+    expect(html).toMatch(/Google Places/);
+    expect(html).toMatch(/dado de terceiro/i);
+
+    // O handler de clique precisa escolher o aviso com base em body.data.provider.
+    expect(html).toMatch(/body\.data\.provider === 'google_places'\s*\?\s*AVISO_BUSCA_GOOGLE\s*:\s*AVISO_BUSCA_MOCK/);
+  });
+
+  test('o aviso volta para o texto de mock ao trocar de campanha (reset em abrirLeadsDaCampanha)', () => {
+    const idxAbrir = html.indexOf('function abrirLeadsDaCampanha(');
+    const idxReset = html.indexOf("getElementById('busca-aviso').textContent = AVISO_BUSCA_MOCK");
+
+    expect(idxAbrir).toBeGreaterThan(-1);
+    expect(idxReset).toBeGreaterThan(idxAbrir);
+  });
+
+  test('a chave GOOGLE_PLACES_API_KEY nunca aparece no frontend (a chamada não expõe segredo)', () => {
+    expect(html).not.toContain('GOOGLE_PLACES_API_KEY');
+    expect(html).not.toContain('X-Goog-Api-Key');
+  });
 });

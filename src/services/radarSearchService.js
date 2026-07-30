@@ -1,4 +1,8 @@
+const { buscarViaGooglePlaces } = require('./googlePlacesProvider');
+
 const MAX_SUGGESTIONS = 5;
+
+const PROVIDERS = { MOCK: 'mock', GOOGLE_PLACES: 'google_places' };
 
 const SUFIXOS_FICTICIOS = ['Horizonte', 'Nova Esperança', 'Central', 'Bela Vista', 'Prime'];
 
@@ -65,4 +69,29 @@ function buscarOportunidadesMock(campaign) {
   return sugestoes;
 }
 
-module.exports = { buscarOportunidadesMock, MAX_SUGGESTIONS };
+// Provider switch: `mock` é sempre o default absoluto. O provider real só
+// roda se `RADAR_SEARCH_PROVIDER=google_places` **e** `GOOGLE_PLACES_API_KEY`
+// existirem juntos — nenhuma das duas condições sozinha liga o Google. Se o
+// provider real falhar (chave ausente, erro de rede, erro HTTP), o erro sobe
+// para quem chamou — nunca cai de volta para o mock em silêncio, para nunca
+// misturar dado real com fictício sem o operador perceber.
+function providerConfigurado() {
+  return process.env.RADAR_SEARCH_PROVIDER === PROVIDERS.GOOGLE_PLACES
+    ? PROVIDERS.GOOGLE_PLACES
+    : PROVIDERS.MOCK;
+}
+
+async function buscarOportunidades(campaign) {
+  const provider = providerConfigurado();
+
+  if (provider === PROVIDERS.GOOGLE_PLACES) {
+    const sugestoes = await buscarViaGooglePlaces(campaign, {
+      apiKey: process.env.GOOGLE_PLACES_API_KEY,
+    });
+    return { sugestoes, provider: PROVIDERS.GOOGLE_PLACES };
+  }
+
+  return { sugestoes: buscarOportunidadesMock(campaign), provider: PROVIDERS.MOCK };
+}
+
+module.exports = { buscarOportunidadesMock, buscarOportunidades, MAX_SUGGESTIONS, PROVIDERS };

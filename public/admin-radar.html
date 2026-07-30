@@ -505,7 +505,7 @@
       <div id="pesquisa-lista"></div>
 
       <div class="hairline"></div>
-      <p class="ajuda-import">Busca mockada para validar o fluxo. Integração real vem depois. Nenhuma chamada externa é feita e nenhum lead é salvo automaticamente — revise cada sugestão antes de salvar.</p>
+      <p class="ajuda-import" id="busca-aviso">Busca mockada para validar o fluxo. Integração real vem depois. Nenhuma chamada externa é feita e nenhum lead é salvo automaticamente — revise cada sugestão antes de salvar.</p>
       <button class="btn-criar" id="buscar-oportunidades" type="button">Buscar oportunidades</button>
       <div class="empty" id="busca-carregando" style="display:none; padding:24px 0;">Buscando...</div>
       <div class="erro-form" id="erro-form-busca"></div>
@@ -718,6 +718,14 @@ const MESSAGE_CHANNEL_LABELS = {
   telefone: 'Telefone',
   manual: 'Manual',
 };
+
+const FONTE_BUSCA_LABELS = {
+  mock: 'Mock',
+  google_places: 'Google Places',
+};
+
+const AVISO_BUSCA_MOCK = 'Busca mockada para validar o fluxo. Integração real vem depois. Nenhuma chamada externa é feita e nenhum lead é salvo automaticamente — revise cada sugestão antes de salvar.';
+const AVISO_BUSCA_GOOGLE = 'Busca via Google Places. Dado de terceiro — revise cada sugestão e confirme antes de contatar. Nenhum lead é salvo automaticamente.';
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -1078,9 +1086,11 @@ function renderSugestoesBusca() {
   }
 
   const visiveis = sugestoesBusca.filter(s => !s.salva && !s.descartada);
+  const fontePrimeira = sugestoesBusca[0] ? sugestoesBusca[0].fonte : 'mock';
+  const fonteLabel = FONTE_BUSCA_LABELS[fontePrimeira] || fontePrimeira;
 
   resultado.style.display = 'block';
-  resumo.innerHTML = `<strong>${visiveis.length}</strong> sugestão(ões) para revisar de ${sugestoesBusca.length} geradas (fonte: mock).`;
+  resumo.innerHTML = `<strong>${visiveis.length}</strong> sugestão(ões) para revisar de ${sugestoesBusca.length} geradas (fonte: ${escapeHtml(fonteLabel)}).`;
 
   if (visiveis.length === 0) {
     grid.innerHTML = '<p class="pesquisa-vazio">Todas as sugestões desta busca foram salvas ou descartadas.</p>';
@@ -1090,11 +1100,13 @@ function renderSugestoesBusca() {
   grid.innerHTML = sugestoesBusca.map((sugestao, idx) => {
     if (sugestao.salva || sugestao.descartada) return '';
 
+    const fonteTag = FONTE_BUSCA_LABELS[sugestao.fonte] || sugestao.fonte;
+
     return `
       <div class="card" data-idx="${idx}">
         <h3>${escapeHtml(sugestao.nomeEmpresa)}</h3>
         <div class="import-resumo">
-          <span class="import-resumo-tag">Fonte: mock</span>
+          <span class="import-resumo-tag">Fonte: ${escapeHtml(fonteTag)}</span>
           ${sugestao.duplicado ? '<span class="import-resumo-tag duplicado">Já existe nesta campanha</span>' : ''}
         </div>
 
@@ -1216,6 +1228,10 @@ document.getElementById('buscar-oportunidades').addEventListener('click', async 
     if (!res.ok) throw new Error(body.error?.message || 'Não foi possível buscar oportunidades.');
 
     sugestoesBusca = body.data.sugestoes.map(s => ({ ...s, salva: false, descartada: false }));
+
+    const aviso = document.getElementById('busca-aviso');
+    aviso.textContent = body.data.provider === 'google_places' ? AVISO_BUSCA_GOOGLE : AVISO_BUSCA_MOCK;
+
     renderSugestoesBusca();
   } catch (err) {
     erroForm.textContent = err.message;
@@ -1360,6 +1376,7 @@ function abrirLeadsDaCampanha(campanha) {
   document.getElementById('busca-resultado').style.display = 'none';
   document.getElementById('erro-form-busca').style.display = 'none';
   document.getElementById('busca-carregando').style.display = 'none';
+  document.getElementById('busca-aviso').textContent = AVISO_BUSCA_MOCK;
 
   document.getElementById('captura-texto').value = '';
   document.getElementById('captura-previa').style.display = 'none';
