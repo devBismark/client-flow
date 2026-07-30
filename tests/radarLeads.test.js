@@ -856,3 +856,138 @@ describe('public/admin-radar.html — pesquisa assistida', () => {
     expect(consultas).toEqual([]);
   });
 });
+
+describe('public/admin-radar.html — captura assistida', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const vm = require('vm');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin-radar.html'),
+    'utf8'
+  );
+
+  test('a UI inclui a seção "Captura assistida" com textarea, extrair prévia e prévia editável', () => {
+    expect(html).toContain('Captura assistida');
+    expect(html).toContain('captura-texto');
+    expect(html).toContain('extrair-previa');
+    expect(html).toContain('captura-previa');
+    expect(html).toContain('salvar-captura');
+    expect(html).toContain('captura-nomeEmpresa');
+    expect(html).toContain('captura-cidade');
+    expect(html).toContain('captura-pais');
+    expect(html).toContain('captura-site');
+    expect(html).toContain('captura-instagram');
+    expect(html).toContain('captura-email');
+    expect(html).toContain('captura-telefone');
+    expect(html).toContain('captura-googleMapsUrl');
+    expect(html).toContain('captura-observacoes');
+  });
+
+  // Mesma técnica usada para "pesquisa assistida": sem jsdom (nenhuma
+  // dependência nova permitida), a lógica pura de extração é testada
+  // executando o próprio <script> num sandbox `vm` com um `document` mínimo.
+  function carregarScriptCliente() {
+    const match = html.match(/<script>([\s\S]*?)<\/script>/);
+    const code = match[1];
+
+    function makeEl() {
+      return {
+        value: '', textContent: '', innerHTML: '', className: '', style: {}, dataset: {},
+        classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+        addEventListener() {},
+        appendChild() {},
+        querySelector() { return makeEl(); },
+        querySelectorAll() { return []; },
+        closest() { return makeEl(); },
+      };
+    }
+
+    const fakeDocument = {
+      getElementById() { return makeEl(); },
+      createElement() { return makeEl(); },
+      addEventListener() {},
+      querySelectorAll() { return []; },
+    };
+
+    const sandbox = {
+      document: fakeDocument,
+      window: {},
+      navigator: { clipboard: { writeText: async () => {} } },
+      fetch: async () => ({ ok: true, json: async () => ({ data: [], meta: { page: 1, limit: 20, total: 0 } }) }),
+      console,
+      URLSearchParams,
+      setTimeout,
+      alert: () => {},
+    };
+
+    vm.createContext(sandbox);
+    vm.runInContext(code, sandbox, { filename: 'admin-radar-script.js' });
+    return sandbox;
+  }
+
+  test('extrairPreviaLead() detecta email', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead('Clínica X\ncontato@clinicax.pt', {});
+    expect(previa.email).toBe('contato@clinicax.pt');
+  });
+
+  test('extrairPreviaLead() detecta telefone', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead('Clínica X\n+351 900 000 000', {});
+    expect(previa.telefone).toBe('+351 900 000 000');
+  });
+
+  test('extrairPreviaLead() detecta site', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead('Clínica X\nhttps://clinicax.pt', {});
+    expect(previa.site).toBe('https://clinicax.pt');
+  });
+
+  test('extrairPreviaLead() detecta instagram por @usuario', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead('Clínica X\n@clinicax', {});
+    expect(previa.instagram).toBe('@clinicax');
+  });
+
+  test('extrairPreviaLead() detecta instagram por URL instagram.com/usuario', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead('Clínica X\nhttps://www.instagram.com/clinicax/', {});
+    expect(previa.instagram).toBe('@clinicax');
+  });
+
+  test('extrairPreviaLead() não confunde coordenadas de um link do Google Maps com telefone e preserva a URL inteira', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead(
+      'Clínica X\nhttps://www.google.com/maps/place/Clinica/@38.7223,-9.1393,15z',
+      {}
+    );
+    expect(previa.googleMapsUrl).toBe('https://www.google.com/maps/place/Clinica/@38.7223,-9.1393,15z');
+    expect(previa.telefone).toBe('');
+  });
+
+  test('extrairPreviaLead() preenche cidade com a campanha atual quando o texto colado não traz cidade', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead('Clínica X', { cidade: 'Porto' });
+    expect(previa.cidade).toBe('Porto');
+    expect(previa.pais).toBe('');
+  });
+
+  test('extrairPreviaLead() usa a primeira linha não vazia como sugestão de nomeEmpresa', () => {
+    const sandbox = carregarScriptCliente();
+    const previa = sandbox.extrairPreviaLead('\n  Clínica Exemplo  \nRua Tal, 123', {});
+    expect(previa.nomeEmpresa).toBe('Clínica Exemplo');
+  });
+
+  test('extrairPreviaLead() é uma função pura e nunca chama rede — colar/extrair não salva automaticamente', () => {
+    const sandbox = carregarScriptCliente();
+    let fetchChamado = false;
+    sandbox.fetch = async (...args) => {
+      fetchChamado = true;
+      return { ok: true, json: async () => ({}) };
+    };
+
+    sandbox.extrairPreviaLead('Clínica X\ncontato@clinicax.pt\n+351 900 000 000', { cidade: 'Lisboa' });
+
+    expect(fetchChamado).toBe(false);
+  });
+});

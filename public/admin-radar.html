@@ -473,6 +473,60 @@
     </div>
 
     <div class="painel-novo">
+      <h2>Captura assistida</h2>
+      <p class="ajuda-import">Cole aqui um trecho de texto copiado do Google, Maps, site ou Instagram sobre um negócio. A extração é uma sugestão local, sem chamada externa — revise e edite antes de salvar.</p>
+      <label class="field-label">Cole aqui informações encontradas sobre um negócio</label>
+      <textarea id="captura-texto" rows="6" placeholder="Ex.: Clínica Exemplo&#10;Rua Tal, 123, Lisboa&#10;https://clinicaexemplo.pt&#10;@clinicaexemplo&#10;contato@clinicaexemplo.pt&#10;+351 900 000 000"></textarea>
+      <button class="btn-criar" id="extrair-previa" style="margin-top:10px">Extrair prévia</button>
+
+      <div id="captura-previa" style="display:none; margin-top:18px;">
+        <div class="hairline"></div>
+        <div class="campo-grid">
+          <div>
+            <label class="field-label">Nome da empresa</label>
+            <input type="text" id="captura-nomeEmpresa" maxlength="120">
+          </div>
+          <div>
+            <label class="field-label">Cidade</label>
+            <input type="text" id="captura-cidade" maxlength="120">
+          </div>
+          <div>
+            <label class="field-label">País</label>
+            <input type="text" id="captura-pais" maxlength="120">
+          </div>
+          <div>
+            <label class="field-label">Site</label>
+            <input type="text" id="captura-site" maxlength="300">
+          </div>
+          <div>
+            <label class="field-label">Instagram</label>
+            <input type="text" id="captura-instagram" maxlength="200">
+          </div>
+          <div>
+            <label class="field-label">Email</label>
+            <input type="text" id="captura-email" maxlength="200">
+          </div>
+          <div>
+            <label class="field-label">Telefone</label>
+            <input type="text" id="captura-telefone" maxlength="60">
+          </div>
+          <div>
+            <label class="field-label">Google Maps</label>
+            <input type="text" id="captura-googleMapsUrl" maxlength="500">
+          </div>
+        </div>
+        <div class="campo-grid" style="grid-template-columns: 1fr;">
+          <div>
+            <label class="field-label">Observações</label>
+            <textarea id="captura-observacoes" maxlength="2000"></textarea>
+          </div>
+        </div>
+        <button class="btn-criar" id="salvar-captura">Salvar como lead</button>
+        <div class="erro-form" id="erro-form-captura"></div>
+      </div>
+    </div>
+
+    <div class="painel-novo">
       <h2>Novo lead</h2>
       <div class="campo-grid">
         <div>
@@ -917,6 +971,120 @@ function bindEventsPesquisa() {
   });
 }
 
+/* ---------- Captura assistida ---------- */
+
+function extrairPreviaLead(texto, campanha) {
+  const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+  const primeiraLinha = linhas[0] || '';
+
+  // URLs são extraídas primeiro e removidas do texto restante, para que os
+  // números dentro delas (ex.: coordenadas de um link do Maps) não sejam
+  // confundidos com telefone pela regex simples abaixo.
+  const urls = texto.match(/https?:\/\/\S+|www\.\S+/gi) || [];
+  let site = '';
+  let instagram = '';
+  let googleMapsUrl = '';
+  let restante = texto;
+
+  urls.forEach(url => {
+    const limpo = url.replace(/[),.;]+$/, '');
+    restante = restante.split(url).join(' ');
+
+    if (/instagram\.com/i.test(limpo)) {
+      if (!instagram) {
+        const usuario = (limpo.split('instagram.com/')[1] || '').split(/[/?#]/)[0];
+        instagram = usuario ? `@${usuario}` : limpo;
+      }
+    } else if (/google\.[a-z.]+\/maps|goo\.gl\/maps|maps\.app\.goo\.gl/i.test(limpo)) {
+      if (!googleMapsUrl) googleMapsUrl = limpo;
+    } else if (!site) {
+      site = limpo;
+    }
+  });
+
+  const emailMatch = restante.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const semEmail = emailMatch ? restante.replace(emailMatch[0], ' ') : restante;
+
+  if (!instagram) {
+    const handleMatch = semEmail.match(/@([a-zA-Z0-9_.]{2,30})/);
+    if (handleMatch) instagram = `@${handleMatch[1]}`;
+  }
+
+  const telefoneMatch = semEmail.match(/(\+?\d[\d\s().-]{7,}\d)/);
+
+  return {
+    nomeEmpresa: primeiraLinha.slice(0, 120),
+    cidade: (campanha && campanha.cidade) || '',
+    pais: '',
+    site,
+    instagram,
+    email: emailMatch ? emailMatch[0] : '',
+    telefone: telefoneMatch ? telefoneMatch[0].trim() : '',
+    googleMapsUrl,
+    observacoes: texto.trim().slice(0, 2000),
+  };
+}
+
+function preencherPreviaCaptura(previa) {
+  document.getElementById('captura-nomeEmpresa').value = previa.nomeEmpresa;
+  document.getElementById('captura-cidade').value = previa.cidade;
+  document.getElementById('captura-pais').value = previa.pais;
+  document.getElementById('captura-site').value = previa.site;
+  document.getElementById('captura-instagram').value = previa.instagram;
+  document.getElementById('captura-email').value = previa.email;
+  document.getElementById('captura-telefone').value = previa.telefone;
+  document.getElementById('captura-googleMapsUrl').value = previa.googleMapsUrl;
+  document.getElementById('captura-observacoes').value = previa.observacoes;
+}
+
+document.getElementById('extrair-previa').addEventListener('click', () => {
+  const texto = document.getElementById('captura-texto').value;
+  document.getElementById('erro-form-captura').style.display = 'none';
+
+  if (!texto.trim()) return;
+
+  const previa = extrairPreviaLead(texto, campanhaAtual || {});
+  preencherPreviaCaptura(previa);
+  document.getElementById('captura-previa').style.display = 'block';
+});
+
+document.getElementById('salvar-captura').addEventListener('click', async () => {
+  if (!campanhaAtual) return;
+  const erroForm = document.getElementById('erro-form-captura');
+  erroForm.style.display = 'none';
+
+  const payload = {
+    nomeEmpresa: document.getElementById('captura-nomeEmpresa').value.trim(),
+    cidade: document.getElementById('captura-cidade').value.trim(),
+    pais: document.getElementById('captura-pais').value.trim(),
+    site: document.getElementById('captura-site').value.trim(),
+    instagram: document.getElementById('captura-instagram').value.trim(),
+    email: document.getElementById('captura-email').value.trim(),
+    telefone: document.getElementById('captura-telefone').value.trim(),
+    googleMapsUrl: document.getElementById('captura-googleMapsUrl').value.trim(),
+    observacoes: document.getElementById('captura-observacoes').value.trim(),
+  };
+
+  try {
+    const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível salvar o lead.');
+
+    document.getElementById('captura-texto').value = '';
+    document.getElementById('captura-previa').style.display = 'none';
+
+    leadPaginaAtual = 1;
+    carregarLeads();
+  } catch (err) {
+    erroForm.textContent = err.message;
+    erroForm.style.display = 'block';
+  }
+});
+
 function abrirLeadsDaCampanha(campanha) {
   campanhaAtual = campanha;
   leadPaginaAtual = 1;
@@ -933,6 +1101,10 @@ function abrirLeadsDaCampanha(campanha) {
   `;
 
   renderPesquisaAssistida(campanha);
+
+  document.getElementById('captura-texto').value = '';
+  document.getElementById('captura-previa').style.display = 'none';
+  document.getElementById('erro-form-captura').style.display = 'none';
 
   document.getElementById('novo-lead-nomeEmpresa').value = '';
   document.getElementById('novo-lead-nicho').value = campanha.nicho || '';
