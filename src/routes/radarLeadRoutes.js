@@ -323,11 +323,26 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
     if (solucaoRecomendada !== undefined) updates.solucaoRecomendada = solucaoRecomendada;
     if (produtoRecomendado !== undefined) updates.produtoRecomendado = produtoRecomendado;
 
+    const analiseAtualizada = ANALYSIS_FIELDS.some((field) => req.body[field] !== undefined);
+
+    // O formulário de edição sempre reenvia o valor atual do select de status,
+    // mesmo quando o usuário não o alterou. Por isso, "status enviado" só conta
+    // como troca explícita quando difere do status atual do lead — caso contrário,
+    // o avanço automático novo → analisado (abaixo) fica livre para agir.
+    let leadAtual = null;
+    if (status !== undefined || analiseAtualizada) {
+      leadAtual = await RadarLead.findOne({ _id: req.params.id, campaign_id: campaign._id }).select('status');
+    }
+
     if (status !== undefined) {
       if (!STATUSES.includes(status)) {
         return res.status(400).json({ error: { message: 'Status inválido', allowed: STATUSES } });
       }
-      updates.status = status;
+
+      const statusAlteradoExplicitamente = !leadAtual || leadAtual.status !== status;
+      if (statusAlteradoExplicitamente) {
+        updates.status = status;
+      }
     }
 
     if (prioridade !== undefined) {
@@ -337,21 +352,16 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
       updates.prioridade = prioridade;
     }
 
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: { message: 'Nada para atualizar' } });
-    }
-
-    const analiseAtualizada = ANALYSIS_FIELDS.some((field) => req.body[field] !== undefined);
-
     if (analiseAtualizada) {
       updates.analisadoEm = new Date();
 
-      if (updates.status === undefined) {
-        const leadAtual = await RadarLead.findOne({ _id: req.params.id, campaign_id: campaign._id }).select('status');
-        if (leadAtual && leadAtual.status === 'novo') {
-          updates.status = 'analisado';
-        }
+      if (updates.status === undefined && leadAtual && leadAtual.status === 'novo') {
+        updates.status = 'analisado';
       }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: { message: 'Nada para atualizar' } });
     }
 
     const lead = await RadarLead.findOneAndUpdate(

@@ -471,6 +471,40 @@ describe('PATCH /api/radar/campaigns/:campaignId/leads/:id — análise manual',
     expect(res.body.data.status).toBe('contatado');
   });
 
+  test('análise em lead novo com status "novo" reenviado (igual ao atual) ainda avança para "analisado"', async () => {
+    // Reproduz o payload real do admin-radar.html: o select de status é sempre
+    // reenviado, mesmo sem alteração do usuário.
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+    expect(lead.status).toBe('novo');
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ temSite: true, status: 'novo' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('analisado');
+  });
+
+  test('análise em lead "contatado" com status "contatado" reenviado (igual ao atual) permanece "contatado"', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ status: 'contatado' });
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ temSite: true, status: 'contatado' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('contatado');
+  });
+
   test('status explícito no mesmo PATCH de análise prevalece sobre o avanço automático', async () => {
     const campanha = await criarCampanha();
     const lead = await criarLead(campanha._id);
@@ -703,5 +737,27 @@ describe('POST /api/radar/campaigns/:campaignId/leads/import', () => {
       .set(AUTH)
       .send({ texto: 'Clínica Teste; Lisboa' });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('public/admin-radar.html — seção de análise do lead', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin-radar.html'),
+    'utf8'
+  );
+
+  test('o card de lead inclui o botão/seção "Análise do lead"', () => {
+    expect(html).toContain('Análise do lead');
+    expect(html).toContain('analise-toggle');
+    expect(html).toContain('analise-body');
+  });
+
+  test('a seção de análise inclui os checkboxes, textarea de problemas e campos de solução/produto', () => {
+    expect(html).toContain('campo-analise');
+    expect(html).toContain('campo-lead-problemasEncontrados');
+    expect(html).toContain('campo-lead-solucaoRecomendada');
+    expect(html).toContain('campo-lead-produtoRecomendado');
   });
 });
