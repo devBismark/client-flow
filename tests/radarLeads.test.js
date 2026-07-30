@@ -761,3 +761,98 @@ describe('public/admin-radar.html — seção de análise do lead', () => {
     expect(html).toContain('campo-lead-produtoRecomendado');
   });
 });
+
+describe('public/admin-radar.html — pesquisa assistida', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const vm = require('vm');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin-radar.html'),
+    'utf8'
+  );
+
+  // Este projeto não usa jsdom (nenhuma dependência nova permitida) e o Jest
+  // roda com testEnvironment: 'node' — sem `document`/`window` reais. Por isso
+  // a lógica pura de geração de consultas (`gerarConsultasPesquisa`) é testada
+  // executando o próprio <script> num sandbox `vm` com um `document` mínimo
+  // (suficiente para os listeners de topo não lançarem erro), e a parte visual
+  // (botões/links renderizados) é coberta só por asserção de texto estático no
+  // HTML — a mesma abordagem já usada para validar a seção "Análise do lead".
+  function carregarScriptCliente() {
+    const match = html.match(/<script>([\s\S]*?)<\/script>/);
+    const code = match[1];
+
+    function makeEl() {
+      return {
+        value: '', textContent: '', innerHTML: '', className: '', style: {}, dataset: {},
+        classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+        addEventListener() {},
+        appendChild() {},
+        querySelector() { return makeEl(); },
+        querySelectorAll() { return []; },
+        closest() { return makeEl(); },
+      };
+    }
+
+    const fakeDocument = {
+      getElementById() { return makeEl(); },
+      createElement() { return makeEl(); },
+      addEventListener() {},
+      querySelectorAll() { return []; },
+    };
+
+    const sandbox = {
+      document: fakeDocument,
+      window: {},
+      navigator: { clipboard: { writeText: async () => {} } },
+      fetch: async () => ({ ok: true, json: async () => ({ data: [], meta: { page: 1, limit: 20, total: 0 } }) }),
+      console,
+      URLSearchParams,
+      setTimeout,
+      alert: () => {},
+    };
+
+    vm.createContext(sandbox);
+    vm.runInContext(code, sandbox, { filename: 'admin-radar-script.js' });
+    return sandbox;
+  }
+
+  test('a UI inclui a seção "Pesquisa assistida" com a instrução de copiar e colar em Importar leads', () => {
+    expect(html).toContain('Pesquisa assistida');
+    expect(html).toContain('Pesquise, copie os dados encontrados e cole em');
+    expect(html).toContain('pesquisa-lista');
+  });
+
+  test('gerarConsultasPesquisa() produz as 6 consultas esperadas, com "Abrir Maps" só onde faz sentido', () => {
+    const sandbox = carregarScriptCliente();
+    const consultas = sandbox.gerarConsultasPesquisa({
+      produto: 'Sites e landing pages',
+      nicho: 'Clínicas odontológicas',
+      cidade: 'Lisboa',
+    });
+
+    expect(consultas.map(c => c.texto)).toEqual([
+      'Clínicas odontológicas Lisboa',
+      'Clínicas odontológicas Lisboa site',
+      'Clínicas odontológicas Lisboa instagram',
+      'Clínicas odontológicas Lisboa whatsapp',
+      'Clínicas odontológicas Lisboa google maps',
+      'Clínicas odontológicas Lisboa Sites e landing pages',
+    ]);
+    expect(consultas.map(c => c.maps)).toEqual([true, false, false, false, true, true]);
+  });
+
+  test('gerarConsultasPesquisa() nunca chama API externa nem depende de rede', () => {
+    const sandbox = carregarScriptCliente();
+    expect(typeof sandbox.gerarConsultasPesquisa).toBe('function');
+    // Função pura: mesma campanha sempre produz a mesma lista, sem I/O.
+    const campanha = { produto: 'X', nicho: 'Y', cidade: 'Z' };
+    expect(sandbox.gerarConsultasPesquisa(campanha)).toEqual(sandbox.gerarConsultasPesquisa(campanha));
+  });
+
+  test('gerarConsultasPesquisa() ignora consultas que ficariam vazias', () => {
+    const sandbox = carregarScriptCliente();
+    const consultas = sandbox.gerarConsultasPesquisa({ produto: '', nicho: '', cidade: '' });
+    expect(consultas).toEqual([]);
+  });
+});

@@ -338,6 +338,57 @@
     color: var(--steel-2);
   }
   .analise-check input { width: auto; }
+  .pesquisa-linha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .pesquisa-linha:last-child { border-bottom: none; }
+  .pesquisa-texto {
+    font-size: 12px;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .pesquisa-acoes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-copiar {
+    background: transparent;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 6px 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn-copiar:hover { border-color: var(--steel-2); }
+  .btn-copiar.copiado { color: var(--text); border-color: var(--steel-2); }
+  .link-abrir {
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 6px 12px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .link-abrir:hover { color: var(--steel-2); border-color: var(--steel-2); }
+  .pesquisa-vazio {
+    color: var(--muted);
+    font-size: 11px;
+  }
 </style>
 </head>
 <body>
@@ -413,6 +464,12 @@
     <div class="painel-novo">
       <h2>Campanha</h2>
       <div class="resumo-campanha" id="campanha-resumo"></div>
+    </div>
+
+    <div class="painel-novo">
+      <h2>Pesquisa assistida</h2>
+      <p class="ajuda-import">Pesquise, copie os dados encontrados e cole em <strong>Importar leads</strong> abaixo. Nenhuma busca é feita automaticamente por aqui.</p>
+      <div id="pesquisa-lista"></div>
     </div>
 
     <div class="painel-novo">
@@ -794,6 +851,72 @@ const LEAD_LIMITE = 20;
 let filtroLeadStatus = '';
 let filtroLeadPrioridade = '';
 
+/* ---------- Pesquisa assistida ---------- */
+
+function gerarConsultasPesquisa(campanha) {
+  const nicho = (campanha.nicho || '').trim();
+  const cidade = (campanha.cidade || '').trim();
+  const produto = (campanha.produto || '').trim();
+  const base = [nicho, cidade].filter(Boolean).join(' ');
+
+  // Toda consulta é ancorada em "nicho + cidade" — sem essa base, um termo
+  // isolado como "site" ou "instagram" não é uma sugestão de pesquisa útil.
+  if (!base) return [];
+
+  const consultas = [
+    { texto: base, maps: true },
+    { texto: `${base} site`, maps: false },
+    { texto: `${base} instagram`, maps: false },
+    { texto: `${base} whatsapp`, maps: false },
+    { texto: `${base} google maps`, maps: true },
+    { texto: produto ? `${base} ${produto}` : '', maps: true },
+  ];
+
+  return consultas.filter(c => c.texto.trim().length > 0);
+}
+
+function renderPesquisaAssistida(campanha) {
+  const container = document.getElementById('pesquisa-lista');
+  const consultas = gerarConsultasPesquisa(campanha);
+
+  if (!consultas.length) {
+    container.innerHTML = '<p class="pesquisa-vazio">Preencha nicho e cidade da campanha para gerar sugestões de pesquisa.</p>';
+    return;
+  }
+
+  container.innerHTML = consultas.map(c => `
+    <div class="pesquisa-linha">
+      <span class="pesquisa-texto">${escapeHtml(c.texto)}</span>
+      <div class="pesquisa-acoes">
+        <button type="button" class="btn-copiar" data-query="${escapeHtml(c.texto)}">Copiar</button>
+        <a class="link-abrir" href="https://www.google.com/search?q=${encodeURIComponent(c.texto)}" target="_blank" rel="noopener noreferrer">Abrir Google</a>
+        ${c.maps ? `<a class="link-abrir" href="https://www.google.com/maps/search/${encodeURIComponent(c.texto)}" target="_blank" rel="noopener noreferrer">Abrir Maps</a>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  bindEventsPesquisa();
+}
+
+function bindEventsPesquisa() {
+  document.querySelectorAll('.btn-copiar').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.query);
+        const original = btn.textContent;
+        btn.classList.add('copiado');
+        btn.textContent = 'Copiado';
+        setTimeout(() => {
+          btn.classList.remove('copiado');
+          btn.textContent = original;
+        }, 1600);
+      } catch (err) {
+        alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.');
+      }
+    });
+  });
+}
+
 function abrirLeadsDaCampanha(campanha) {
   campanhaAtual = campanha;
   leadPaginaAtual = 1;
@@ -808,6 +931,8 @@ function abrirLeadsDaCampanha(campanha) {
     Objetivo: ${escapeHtml(campanha.objetivo)}<br>
     Status: ${escapeHtml(STATUS_LABELS[campanha.status] || campanha.status)}
   `;
+
+  renderPesquisaAssistida(campanha);
 
   document.getElementById('novo-lead-nomeEmpresa').value = '';
   document.getElementById('novo-lead-nicho').value = campanha.nicho || '';
