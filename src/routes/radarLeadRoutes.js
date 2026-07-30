@@ -1,5 +1,5 @@
 const express = require('express');
-const { RadarLead, STATUSES, PRIORITIES } = require('../models/RadarLead');
+const { RadarLead, STATUSES, PRIORITIES, ANALYSIS_FIELDS } = require('../models/RadarLead');
 const { RadarCampaign } = require('../models/RadarCampaign');
 const { requireAdminKey } = require('../middlewares/auth');
 const router = express.Router({ mergeParams: true });
@@ -280,6 +280,20 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
       observacoes,
       status,
       prioridade,
+      temSite,
+      siteProfissional,
+      siteResponsivo,
+      temWhatsapp,
+      temFormulario,
+      temPaginaServicos,
+      googleMapsPresente,
+      instagramAtivo,
+      parecePrecisarLandingPage,
+      parecePrecisarAutomacao,
+      parecePrecisarSistema,
+      problemasEncontrados,
+      solucaoRecomendada,
+      produtoRecomendado,
     } = req.body;
 
     const updates = {};
@@ -294,6 +308,20 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
     if (telefone !== undefined) updates.telefone = telefone;
     if (googleMapsUrl !== undefined) updates.googleMapsUrl = googleMapsUrl;
     if (observacoes !== undefined) updates.observacoes = observacoes;
+    if (temSite !== undefined) updates.temSite = temSite;
+    if (siteProfissional !== undefined) updates.siteProfissional = siteProfissional;
+    if (siteResponsivo !== undefined) updates.siteResponsivo = siteResponsivo;
+    if (temWhatsapp !== undefined) updates.temWhatsapp = temWhatsapp;
+    if (temFormulario !== undefined) updates.temFormulario = temFormulario;
+    if (temPaginaServicos !== undefined) updates.temPaginaServicos = temPaginaServicos;
+    if (googleMapsPresente !== undefined) updates.googleMapsPresente = googleMapsPresente;
+    if (instagramAtivo !== undefined) updates.instagramAtivo = instagramAtivo;
+    if (parecePrecisarLandingPage !== undefined) updates.parecePrecisarLandingPage = parecePrecisarLandingPage;
+    if (parecePrecisarAutomacao !== undefined) updates.parecePrecisarAutomacao = parecePrecisarAutomacao;
+    if (parecePrecisarSistema !== undefined) updates.parecePrecisarSistema = parecePrecisarSistema;
+    if (problemasEncontrados !== undefined) updates.problemasEncontrados = problemasEncontrados;
+    if (solucaoRecomendada !== undefined) updates.solucaoRecomendada = solucaoRecomendada;
+    if (produtoRecomendado !== undefined) updates.produtoRecomendado = produtoRecomendado;
 
     if (status !== undefined) {
       if (!STATUSES.includes(status)) {
@@ -311,6 +339,19 @@ router.patch('/:id', requireAdminKey, async (req, res, next) => {
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: { message: 'Nada para atualizar' } });
+    }
+
+    const analiseAtualizada = ANALYSIS_FIELDS.some((field) => req.body[field] !== undefined);
+
+    if (analiseAtualizada) {
+      updates.analisadoEm = new Date();
+
+      if (updates.status === undefined) {
+        const leadAtual = await RadarLead.findOne({ _id: req.params.id, campaign_id: campaign._id }).select('status');
+        if (leadAtual && leadAtual.status === 'novo') {
+          updates.status = 'analisado';
+        }
+      }
     }
 
     const lead = await RadarLead.findOneAndUpdate(

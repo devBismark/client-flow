@@ -303,6 +303,41 @@
   .resumo-campanha strong {
     color: var(--steel-2);
   }
+  .analise-toggle {
+    width: 100%;
+    background: transparent;
+    color: var(--steel-3);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 14px;
+  }
+  .analise-toggle:hover { border-color: var(--steel-2); }
+  .analise-body {
+    display: none;
+    margin-top: 12px;
+  }
+  .analise-body.aberta { display: block; }
+  .analise-checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .analise-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    color: var(--steel-2);
+  }
+  .analise-check input { width: auto; }
 </style>
 </head>
 <body>
@@ -495,6 +530,20 @@ const LEAD_PRIORITY_LABELS = {
   alta: 'Alta',
   urgente: 'Urgente',
 };
+
+const ANALISE_CHECKS = [
+  ['temSite', 'Tem site'],
+  ['siteProfissional', 'Site profissional'],
+  ['siteResponsivo', 'Site responsivo'],
+  ['temWhatsapp', 'Tem WhatsApp'],
+  ['temFormulario', 'Tem formulário'],
+  ['temPaginaServicos', 'Tem página de serviços'],
+  ['googleMapsPresente', 'Presente no Google Maps'],
+  ['instagramAtivo', 'Instagram ativo'],
+  ['parecePrecisarLandingPage', 'Parece precisar de landing page'],
+  ['parecePrecisarAutomacao', 'Parece precisar de automação'],
+  ['parecePrecisarSistema', 'Parece precisar de sistema'],
+];
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -993,6 +1042,29 @@ function renderLeads(leads, meta) {
         <div class="field-label" style="margin-top:10px">Prioridade</div>
         <select class="campo-lead-prioridade">${prioridadeOptions}</select>
 
+        <button class="analise-toggle" type="button">Análise do lead ▾</button>
+        <div class="analise-body">
+          <div class="analise-checks">
+            ${ANALISE_CHECKS.map(([campo, label]) => `
+              <label class="analise-check">
+                <input type="checkbox" class="campo-analise" data-campo="${campo}" ${lead[campo] ? 'checked' : ''}>
+                ${escapeHtml(label)}
+              </label>
+            `).join('')}
+          </div>
+
+          <div class="field-label">Problemas encontrados (um por linha)</div>
+          <textarea class="campo-lead-problemasEncontrados" maxlength="4000">${escapeHtml((lead.problemasEncontrados || []).join('\n'))}</textarea>
+
+          <div class="field-label" style="margin-top:10px">Solução recomendada</div>
+          <textarea class="campo-lead-solucaoRecomendada" maxlength="2000">${escapeHtml(lead.solucaoRecomendada)}</textarea>
+
+          <div class="field-label" style="margin-top:10px">Produto recomendado</div>
+          <input type="text" class="campo-lead-produtoRecomendado" value="${escapeHtml(lead.produtoRecomendado)}" maxlength="200">
+
+          ${lead.analisadoEm ? `<div class="meta-row"><span>Analisado em ${new Date(lead.analisadoEm).toLocaleString('pt-PT')}</span></div>` : ''}
+        </div>
+
         <div class="meta-row"><span>${criado}</span></div>
 
         <button class="btn-salvar btn-salvar-lead" data-id="${lead._id}">Salvar alterações</button>
@@ -1022,7 +1094,17 @@ function bindEventsLeads() {
         observacoes: card.querySelector('.campo-lead-observacoes').value.trim(),
         status: card.querySelector('.campo-lead-status').value,
         prioridade: card.querySelector('.campo-lead-prioridade').value,
+        problemasEncontrados: card.querySelector('.campo-lead-problemasEncontrados').value
+          .split('\n')
+          .map(linha => linha.trim())
+          .filter(linha => linha.length > 0),
+        solucaoRecomendada: card.querySelector('.campo-lead-solucaoRecomendada').value.trim(),
+        produtoRecomendado: card.querySelector('.campo-lead-produtoRecomendado').value.trim(),
       };
+
+      card.querySelectorAll('.campo-analise').forEach(input => {
+        payload[input.dataset.campo] = input.checked;
+      });
 
       try {
         const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads/${id}`, {
@@ -1033,13 +1115,16 @@ function bindEventsLeads() {
         const body = await res.json();
         if (!res.ok) throw new Error(body.error?.message || 'Falha ao salvar.');
 
+        const leadAtualizado = body.data;
+
         const statusTag = card.querySelector('.status-tag');
-        statusTag.textContent = LEAD_STATUS_LABELS[payload.status] || payload.status;
-        statusTag.className = `status-tag ${payload.status}`;
+        statusTag.textContent = LEAD_STATUS_LABELS[leadAtualizado.status] || leadAtualizado.status;
+        statusTag.className = `status-tag ${leadAtualizado.status}`;
+        card.querySelector('.campo-lead-status').value = leadAtualizado.status;
 
         const prioridadeTag = card.querySelector('.prioridade-tag');
-        prioridadeTag.textContent = LEAD_PRIORITY_LABELS[payload.prioridade] || payload.prioridade;
-        prioridadeTag.className = `prioridade-tag ${payload.prioridade}`;
+        prioridadeTag.textContent = LEAD_PRIORITY_LABELS[leadAtualizado.prioridade] || leadAtualizado.prioridade;
+        prioridadeTag.className = `prioridade-tag ${leadAtualizado.prioridade}`;
 
         btn.classList.add('saved');
         btn.textContent = 'Salvo';
@@ -1050,6 +1135,12 @@ function bindEventsLeads() {
       } catch (err) {
         alert(err.message);
       }
+    });
+  });
+
+  document.querySelectorAll('.analise-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.nextElementSibling.classList.toggle('aberta');
     });
   });
 }

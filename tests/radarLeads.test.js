@@ -373,6 +373,157 @@ describe('PATCH /api/radar/campaigns/:campaignId/leads/:id', () => {
   });
 });
 
+describe('PATCH /api/radar/campaigns/:campaignId/leads/:id — análise manual', () => {
+  test('aceita campos booleanos de análise', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({
+        temSite: true,
+        siteProfissional: false,
+        siteResponsivo: true,
+        temWhatsapp: true,
+        temFormulario: false,
+        temPaginaServicos: true,
+        googleMapsPresente: true,
+        instagramAtivo: false,
+        parecePrecisarLandingPage: true,
+        parecePrecisarAutomacao: false,
+        parecePrecisarSistema: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.temSite).toBe(true);
+    expect(res.body.data.siteProfissional).toBe(false);
+    expect(res.body.data.siteResponsivo).toBe(true);
+    expect(res.body.data.temWhatsapp).toBe(true);
+    expect(res.body.data.temFormulario).toBe(false);
+    expect(res.body.data.temPaginaServicos).toBe(true);
+    expect(res.body.data.googleMapsPresente).toBe(true);
+    expect(res.body.data.instagramAtivo).toBe(false);
+    expect(res.body.data.parecePrecisarLandingPage).toBe(true);
+    expect(res.body.data.parecePrecisarAutomacao).toBe(false);
+    expect(res.body.data.parecePrecisarSistema).toBe(true);
+  });
+
+  test('aceita problemasEncontrados como array', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ problemasEncontrados: ['Sem site', 'Sem WhatsApp visível'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.problemasEncontrados).toEqual(['Sem site', 'Sem WhatsApp visível']);
+  });
+
+  test('aceita solucaoRecomendada e produtoRecomendado', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({
+        solucaoRecomendada: 'Criar landing page com formulário de agendamento.',
+        produtoRecomendado: 'Landing page',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.solucaoRecomendada).toBe('Criar landing page com formulário de agendamento.');
+    expect(res.body.data.produtoRecomendado).toBe('Landing page');
+  });
+
+  test('análise em lead novo muda status para "analisado" automaticamente', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+    expect(lead.status).toBe('novo');
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ temSite: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('analisado');
+  });
+
+  test('análise em lead com status "contatado" não muda o status', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ status: 'contatado' });
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ temSite: true, problemasEncontrados: ['Sem formulário'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('contatado');
+  });
+
+  test('status explícito no mesmo PATCH de análise prevalece sobre o avanço automático', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+    expect(lead.status).toBe('novo');
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ temSite: true, status: 'contatado' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('contatado');
+  });
+
+  test('analisadoEm é definido quando há atualização de análise', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+    expect(lead.analisadoEm).toBeUndefined();
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ produtoRecomendado: 'Sistema interno' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.analisadoEm).toBeTruthy();
+  });
+
+  test('analisadoEm não é definido em atualização sem campos de análise', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    const res = await request(app)
+      .patch(`/api/radar/campaigns/${campanha._id}/leads/${lead._id}`)
+      .set(AUTH)
+      .send({ cidade: 'Porto' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.analisadoEm).toBeFalsy();
+  });
+
+  test('novo lead nasce com defaults de análise vazios', async () => {
+    const campanha = await criarCampanha();
+    const lead = await criarLead(campanha._id);
+
+    expect(lead.temSite).toBe(false);
+    expect(lead.problemasEncontrados).toEqual([]);
+    expect(lead.solucaoRecomendada).toBe('');
+    expect(lead.produtoRecomendado).toBe('');
+    expect(lead.analisadoEm).toBeFalsy();
+  });
+});
+
 describe('POST /api/radar/campaigns/:campaignId/leads/import', () => {
   async function importar(campaignId, texto) {
     return request(app)
