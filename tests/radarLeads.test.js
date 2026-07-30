@@ -1012,8 +1012,8 @@ describe('public/admin-radar.html — pesquisa assistida', () => {
     return sandbox;
   }
 
-  test('a UI inclui a seção "Pesquisa assistida" com a instrução de copiar e colar em Importar leads', () => {
-    expect(html).toContain('Pesquisa assistida');
+  test('a UI inclui a seção "1. Pesquisar oportunidades" com a instrução de copiar e colar em "2. Capturar lead"', () => {
+    expect(html).toContain('1. Pesquisar oportunidades');
     expect(html).toContain('Pesquise, copie os dados encontrados e cole em');
     expect(html).toContain('pesquisa-lista');
   });
@@ -1061,8 +1061,8 @@ describe('public/admin-radar.html — captura assistida', () => {
     'utf8'
   );
 
-  test('a UI inclui a seção "Captura assistida" com textarea, extrair prévia e prévia editável', () => {
-    expect(html).toContain('Captura assistida');
+  test('a UI inclui a seção "2. Capturar lead" com textarea, extrair prévia e prévia editável', () => {
+    expect(html).toContain('2. Capturar lead');
     expect(html).toContain('captura-texto');
     expect(html).toContain('extrair-previa');
     expect(html).toContain('captura-previa');
@@ -1330,5 +1330,73 @@ describe('public/admin-radar.html — mensagem assistida', () => {
     );
 
     expect(fetchChamado).toBe(false);
+  });
+});
+
+describe('public/admin-radar.html — reorganização do fluxo (UX operacional)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin-radar.html'),
+    'utf8'
+  );
+
+  test('os três blocos principais aparecem na ordem 1 → 2 → 3', () => {
+    const idxPesquisar = html.indexOf('1. Pesquisar oportunidades');
+    const idxCapturar = html.indexOf('2. Capturar lead');
+    const idxLeads = html.indexOf('3. Leads capturados');
+
+    expect(idxPesquisar).toBeGreaterThan(-1);
+    expect(idxCapturar).toBeGreaterThan(-1);
+    expect(idxLeads).toBeGreaterThan(-1);
+    expect(idxPesquisar).toBeLessThan(idxCapturar);
+    expect(idxCapturar).toBeLessThan(idxLeads);
+  });
+
+  test('"Importar leads em lote" continua presente, rebaixado para "Avançado"', () => {
+    expect(html).toContain('Avançado: importar lista em lote');
+    // Funcionalidade intacta: mesmos ids/textarea/botão de sempre.
+    expect(html).toContain('import-leads-texto');
+    expect(html).toContain('id="importar-leads"');
+    expect(html).toContain('>Importar leads<');
+  });
+
+  test('"Novo lead manual" continua presente, rebaixado para "Avançado"', () => {
+    expect(html).toContain('Avançado: criar lead manual');
+    // Funcionalidade intacta: mesmos ids/campos/botão de sempre.
+    expect(html).toContain('novo-lead-nomeEmpresa');
+    expect(html).toContain('id="criar-lead"');
+    expect(html).toContain('>Criar lead<');
+  });
+
+  test('o bloco "Avançado" é recolhível (reaproveita o toggle genérico já existente) e vem antes de "3. Leads capturados"', () => {
+    const idxAvancado = html.indexOf('id="avancado-toggle"');
+    const idxLeads = html.indexOf('3. Leads capturados');
+
+    expect(idxAvancado).toBeGreaterThan(-1);
+    expect(idxAvancado).toBeLessThan(idxLeads);
+    expect(html).toMatch(/avancado-toggle[\s\S]{0,300}analise-body/);
+  });
+
+  test('nenhuma funcionalidade foi removida: pesquisa assistida, captura assistida, análise do lead e mensagem assistida continuam presentes', () => {
+    expect(html).toContain('pesquisa-lista');
+    expect(html).toContain('gerarConsultasPesquisa');
+    expect(html).toContain('captura-previa');
+    expect(html).toContain('extrairPreviaLead');
+    expect(html).toContain('Análise do lead');
+    expect(html).toContain('campo-analise');
+    expect(html).toContain('Mensagem assistida');
+    expect(html).toContain('gerarMensagemAssistida');
+    expect(html).toContain('btn-excluir-lead');
+    expect(html).toContain('btn-excluir-campanha');
+  });
+
+  test('o toggle "Avançado" é vinculado uma única vez fora de bindEventsLeads — não acumula listener a cada renderLeads()', () => {
+    // Regressão: o binding genérico de `.analise-toggle` dentro de bindEventsLeads()
+    // deve estar escopado a #leads-grid, nunca ao document inteiro, para não
+    // re-anexar um listener no botão estático "Avançado" a cada recarregamento
+    // da lista de leads (o que faria o toggle parecer "travado" de forma intermitente).
+    expect(html).toMatch(/leadsGrid\.querySelectorAll\('\.analise-toggle'\)/);
+    expect(html).not.toMatch(/document\.querySelectorAll\('\.analise-toggle'\)/);
   });
 });
