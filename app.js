@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const projectRoutes = require('./src/routes/projectRoutes');
 const diagnosticRoutes = require('./src/routes/diagnosticRoutes');
 const radarRoutes = require('./src/routes/radarRoutes');
+const radarLeadRoutes = require('./src/routes/radarLeadRoutes');
 const { notFound, errorHandler } = require('./src/middlewares/errorHandler');
 const { requireAdminSession, timingSafeEqual } = require('./src/middlewares/auth');
 const { createRateLimiter } = require('./src/middlewares/rateLimiter');
@@ -12,6 +13,11 @@ const projectsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 1
 const diagnosticsRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 });
 const loginRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
 const radarRateLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  methods: ['GET', 'POST', 'PATCH'],
+});
+const radarLeadRateLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 60,
   methods: ['GET', 'POST', 'PATCH'],
@@ -69,6 +75,7 @@ app.get('/health', (req, res) => {
 app.use('/api/projects', projectsRateLimiter, projectRoutes);
 app.use('/api/diagnostics', diagnosticsRateLimiter, diagnosticRoutes);
 app.use('/api/radar/campaigns', radarRateLimiter, radarRoutes);
+app.use('/api/radar/campaigns/:campaignId/leads', radarLeadRateLimiter, radarLeadRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

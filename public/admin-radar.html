@@ -143,6 +143,12 @@
     border-radius: 3px;
     padding: 22px;
   }
+  .card h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin: 0 0 12px;
+  }
   .status-tag {
     display: inline-block;
     font-size: 9px;
@@ -157,6 +163,23 @@
   .status-tag.ativa { color: var(--steel-2); border-color: rgba(201,205,212,0.4); }
   .status-tag.pausada { color: var(--steel-3); border-color: rgba(138,144,152,0.32); }
   .status-tag.encerrada { color: var(--muted); border-color: var(--hairline); }
+  .status-tag.fechado { color: var(--steel-2); border-color: rgba(201,205,212,0.4); }
+  .status-tag.perdido { color: var(--muted); border-color: var(--hairline); }
+  .prioridade-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    border: 1px solid;
+    border-radius: 1px;
+    padding: 4px 10px;
+    margin-bottom: 12px;
+    margin-left: 8px;
+  }
+  .prioridade-tag.baixa { color: var(--steel-3); border-color: rgba(138,144,152,0.32); }
+  .prioridade-tag.media { color: var(--steel-2); border-color: rgba(201,205,212,0.4); }
+  .prioridade-tag.alta { color: var(--danger); border-color: rgba(168,90,90,0.4); }
+  .prioridade-tag.urgente { color: var(--danger); border-color: var(--danger); background: rgba(168,90,90,0.15); }
   .hairline {
     height: 1px;
     background: var(--hairline);
@@ -186,6 +209,22 @@
   }
   .btn-salvar:hover { border-color: var(--steel-2); }
   .btn-salvar.saved { color: var(--text); border-color: var(--steel-2); }
+  .btn-secundario {
+    width: 100%;
+    background: transparent;
+    color: var(--steel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 9px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .btn-secundario:hover { border-color: var(--steel-2); }
   .btn-criar {
     background: transparent;
     color: var(--text);
@@ -222,6 +261,14 @@
     font-size: 11px;
     margin-top: 8px;
   }
+  .resumo-campanha {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .resumo-campanha strong {
+    color: var(--steel-2);
+  }
 </style>
 </head>
 <body>
@@ -229,57 +276,145 @@
 
   <div class="top">
     <div class="mark">IDISTØPIC <span style="opacity:.5">— Radar</span></div>
-    <div class="section-id">Painel / Campanhas</div>
+    <div class="section-id" id="section-id">Painel / Campanhas</div>
   </div>
   <div class="rule"></div>
 
-  <div class="painel-novo">
-    <h2>Nova campanha</h2>
-    <div class="campo-grid">
-      <div>
-        <label class="field-label">Produto</label>
-        <input type="text" id="novo-produto" maxlength="120">
+  <div id="view-campanhas">
+
+    <div class="painel-novo">
+      <h2>Nova campanha</h2>
+      <div class="campo-grid">
+        <div>
+          <label class="field-label">Produto</label>
+          <input type="text" id="novo-produto" maxlength="120">
+        </div>
+        <div>
+          <label class="field-label">Nicho</label>
+          <input type="text" id="novo-nicho" maxlength="120">
+        </div>
+        <div>
+          <label class="field-label">Cidade</label>
+          <input type="text" id="novo-cidade" maxlength="120">
+        </div>
       </div>
-      <div>
-        <label class="field-label">Nicho</label>
-        <input type="text" id="novo-nicho" maxlength="120">
+      <div class="campo-grid" style="grid-template-columns: 1fr;">
+        <div>
+          <label class="field-label">Objetivo</label>
+          <textarea id="novo-objetivo" maxlength="500"></textarea>
+        </div>
+        <div>
+          <label class="field-label">Descrição (opcional)</label>
+          <textarea id="novo-descricao" maxlength="1000"></textarea>
+        </div>
       </div>
-      <div>
-        <label class="field-label">Cidade</label>
-        <input type="text" id="novo-cidade" maxlength="120">
-      </div>
+      <button class="btn-criar" id="criar-campanha">Criar campanha</button>
+      <div class="erro-form" id="erro-form"></div>
     </div>
-    <div class="campo-grid" style="grid-template-columns: 1fr;">
-      <div>
-        <label class="field-label">Objetivo</label>
-        <textarea id="novo-objetivo" maxlength="500"></textarea>
-      </div>
-      <div>
-        <label class="field-label">Descrição (opcional)</label>
-        <textarea id="novo-descricao" maxlength="1000"></textarea>
-      </div>
+
+    <div class="bar">
+      <select id="filtro-status" class="filtro-select">
+        <option value="">Todos os status</option>
+      </select>
+      <button class="btn" id="aplicar-filtros">Aplicar filtros</button>
+      <button class="btn" id="limpar-filtros">Limpar filtros</button>
     </div>
-    <button class="btn-criar" id="criar-campanha">Criar campanha</button>
-    <div class="erro-form" id="erro-form"></div>
+
+    <div class="bar">
+      <button class="btn" id="anterior">Anterior</button>
+      <span class="page-info" id="page-info"></span>
+      <button class="btn" id="proxima">Próxima</button>
+      <button class="btn" id="sair" style="margin-left:auto">Sair</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty">Carregando...</div>
+
   </div>
 
-  <div class="bar">
-    <select id="filtro-status" class="filtro-select">
-      <option value="">Todos os status</option>
-    </select>
-    <button class="btn" id="aplicar-filtros">Aplicar filtros</button>
-    <button class="btn" id="limpar-filtros">Limpar filtros</button>
-  </div>
+  <div id="view-leads" style="display:none">
 
-  <div class="bar">
-    <button class="btn" id="anterior">Anterior</button>
-    <span class="page-info" id="page-info"></span>
-    <button class="btn" id="proxima">Próxima</button>
-    <button class="btn" id="sair" style="margin-left:auto">Sair</button>
-  </div>
+    <div class="bar">
+      <button class="btn" id="voltar-campanhas">← Voltar para campanhas</button>
+      <button class="btn" id="sair-leads" style="margin-left:auto">Sair</button>
+    </div>
 
-  <div class="grid" id="grid"></div>
-  <div class="empty" id="empty">Carregando...</div>
+    <div class="painel-novo">
+      <h2>Campanha</h2>
+      <div class="resumo-campanha" id="campanha-resumo"></div>
+    </div>
+
+    <div class="painel-novo">
+      <h2>Novo lead</h2>
+      <div class="campo-grid">
+        <div>
+          <label class="field-label">Nome da empresa</label>
+          <input type="text" id="novo-lead-nomeEmpresa" maxlength="120">
+        </div>
+        <div>
+          <label class="field-label">Nicho</label>
+          <input type="text" id="novo-lead-nicho" maxlength="120">
+        </div>
+        <div>
+          <label class="field-label">Cidade</label>
+          <input type="text" id="novo-lead-cidade" maxlength="120">
+        </div>
+        <div>
+          <label class="field-label">País</label>
+          <input type="text" id="novo-lead-pais" maxlength="120">
+        </div>
+        <div>
+          <label class="field-label">Site</label>
+          <input type="text" id="novo-lead-site" maxlength="300">
+        </div>
+        <div>
+          <label class="field-label">Instagram</label>
+          <input type="text" id="novo-lead-instagram" maxlength="200">
+        </div>
+        <div>
+          <label class="field-label">Email</label>
+          <input type="text" id="novo-lead-email" maxlength="200">
+        </div>
+        <div>
+          <label class="field-label">Telefone</label>
+          <input type="text" id="novo-lead-telefone" maxlength="60">
+        </div>
+        <div>
+          <label class="field-label">Google Maps</label>
+          <input type="text" id="novo-lead-googleMapsUrl" maxlength="500">
+        </div>
+      </div>
+      <div class="campo-grid" style="grid-template-columns: 1fr;">
+        <div>
+          <label class="field-label">Observações</label>
+          <textarea id="novo-lead-observacoes" maxlength="2000"></textarea>
+        </div>
+      </div>
+      <button class="btn-criar" id="criar-lead">Criar lead</button>
+      <div class="erro-form" id="erro-form-lead"></div>
+    </div>
+
+    <div class="bar">
+      <select id="filtro-lead-status" class="filtro-select">
+        <option value="">Todos os status</option>
+      </select>
+      <select id="filtro-lead-prioridade" class="filtro-select">
+        <option value="">Todas as prioridades</option>
+      </select>
+      <button class="btn" id="aplicar-filtros-lead">Aplicar filtros</button>
+      <button class="btn" id="limpar-filtros-lead">Limpar filtros</button>
+    </div>
+
+    <div class="bar">
+      <button class="btn" id="lead-anterior">Anterior</button>
+      <span class="page-info" id="lead-page-info"></span>
+      <button class="btn" id="lead-proxima">Próxima</button>
+    </div>
+
+    <div class="grid" id="leads-grid"></div>
+    <div class="empty" id="leads-empty" style="display:none">Carregando...</div>
+
+  </div>
 
 </div>
 
@@ -291,13 +426,30 @@ const STATUS_LABELS = {
   encerrada: 'Encerrada',
 };
 
-const grid = document.getElementById('grid');
-const empty = document.getElementById('empty');
-const pageInfo = document.getElementById('page-info');
+const LEAD_STATUSES = [
+  'novo', 'analisado', 'mensagem_gerada', 'aprovado_contato', 'contatado',
+  'respondeu', 'reuniao_marcada', 'proposta_enviada', 'fechado', 'perdido',
+];
+const LEAD_STATUS_LABELS = {
+  novo: 'Novo',
+  analisado: 'Analisado',
+  mensagem_gerada: 'Mensagem gerada',
+  aprovado_contato: 'Aprovado para contato',
+  contatado: 'Contatado',
+  respondeu: 'Respondeu',
+  reuniao_marcada: 'Reunião marcada',
+  proposta_enviada: 'Proposta enviada',
+  fechado: 'Fechado',
+  perdido: 'Perdido',
+};
 
-let paginaAtual = 1;
-const LIMITE = 20;
-let filtroStatus = '';
+const LEAD_PRIORITIES = ['baixa', 'media', 'alta', 'urgente'];
+const LEAD_PRIORITY_LABELS = {
+  baixa: 'Baixa',
+  media: 'Média',
+  alta: 'Alta',
+  urgente: 'Urgente',
+};
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -305,21 +457,36 @@ function escapeHtml(str) {
   })[c]);
 }
 
-document.getElementById('sair').addEventListener('click', async () => {
+async function sair() {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/login.html';
-});
+}
+document.getElementById('sair').addEventListener('click', sair);
+document.getElementById('sair-leads').addEventListener('click', sair);
+
+/* ---------- Campanhas ---------- */
+
+const grid = document.getElementById('grid');
+const empty = document.getElementById('empty');
+const pageInfo = document.getElementById('page-info');
+const viewCampanhas = document.getElementById('view-campanhas');
+const viewLeads = document.getElementById('view-leads');
+const sectionId = document.getElementById('section-id');
+
+let paginaAtual = 1;
+const LIMITE = 20;
+let filtroStatus = '';
 
 document.getElementById('anterior').addEventListener('click', () => {
   if (paginaAtual > 1) {
     paginaAtual -= 1;
-    carregar();
+    carregarCampanhas();
   }
 });
 
 document.getElementById('proxima').addEventListener('click', () => {
   paginaAtual += 1;
-  carregar();
+  carregarCampanhas();
 });
 
 function popularFiltros() {
@@ -330,19 +497,35 @@ function popularFiltros() {
     opt.textContent = STATUS_LABELS[s] || s;
     selectStatus.appendChild(opt);
   });
+
+  const selectLeadStatus = document.getElementById('filtro-lead-status');
+  LEAD_STATUSES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = LEAD_STATUS_LABELS[s] || s;
+    selectLeadStatus.appendChild(opt);
+  });
+
+  const selectLeadPrioridade = document.getElementById('filtro-lead-prioridade');
+  LEAD_PRIORITIES.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = LEAD_PRIORITY_LABELS[p] || p;
+    selectLeadPrioridade.appendChild(opt);
+  });
 }
 
 document.getElementById('aplicar-filtros').addEventListener('click', () => {
   filtroStatus = document.getElementById('filtro-status').value;
   paginaAtual = 1;
-  carregar();
+  carregarCampanhas();
 });
 
 document.getElementById('limpar-filtros').addEventListener('click', () => {
   document.getElementById('filtro-status').value = '';
   filtroStatus = '';
   paginaAtual = 1;
-  carregar();
+  carregarCampanhas();
 });
 
 document.getElementById('criar-campanha').addEventListener('click', async () => {
@@ -373,14 +556,14 @@ document.getElementById('criar-campanha').addEventListener('click', async () => 
     document.getElementById('novo-descricao').value = '';
 
     paginaAtual = 1;
-    carregar();
+    carregarCampanhas();
   } catch (err) {
     erroForm.textContent = err.message;
     erroForm.style.display = 'block';
   }
 });
 
-async function carregar() {
+async function carregarCampanhas() {
   try {
     const params = new URLSearchParams({ page: paginaAtual, limit: LIMITE });
     if (filtroStatus) params.set('status', filtroStatus);
@@ -388,7 +571,7 @@ async function carregar() {
     const res = await fetch(`/api/radar/campaigns?${params.toString()}`);
     const body = await res.json();
     if (!res.ok) throw new Error(body.error?.message || 'Não foi possível carregar.');
-    render(body.data, body.meta);
+    renderCampanhas(body.data, body.meta);
   } catch (err) {
     grid.innerHTML = '';
     empty.textContent = err.message;
@@ -396,7 +579,7 @@ async function carregar() {
   }
 }
 
-function render(campanhas, meta) {
+function renderCampanhas(campanhas, meta) {
   const totalPaginas = Math.max(Math.ceil(meta.total / meta.limit), 1);
   pageInfo.textContent = `página ${meta.page} de ${totalPaginas} — ${meta.total} campanha(s)`;
 
@@ -443,14 +626,15 @@ function render(campanhas, meta) {
         <div class="meta-row"><span>${criado}</span></div>
 
         <button class="btn-salvar" data-id="${c._id}">Salvar alterações</button>
+        <button class="btn-secundario btn-ver-leads" data-id="${c._id}" data-nicho="${escapeHtml(c.nicho)}" data-cidade="${escapeHtml(c.cidade)}" data-produto="${escapeHtml(c.produto)}" data-objetivo="${escapeHtml(c.objetivo)}" data-status="${status}">Ver leads</button>
       </div>
     `;
   }).join('');
 
-  bindEvents();
+  bindEventsCampanhas();
 }
 
-function bindEvents() {
+function bindEventsCampanhas() {
   document.querySelectorAll('.btn-salvar').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
@@ -489,11 +673,293 @@ function bindEvents() {
       }
     });
   });
+
+  document.querySelectorAll('.btn-ver-leads').forEach(btn => {
+    btn.addEventListener('click', () => {
+      abrirLeadsDaCampanha({
+        id: btn.dataset.id,
+        produto: btn.dataset.produto,
+        nicho: btn.dataset.nicho,
+        cidade: btn.dataset.cidade,
+        objetivo: btn.dataset.objetivo,
+        status: btn.dataset.status,
+      });
+    });
+  });
+}
+
+/* ---------- Leads ---------- */
+
+const leadsGrid = document.getElementById('leads-grid');
+const leadsEmpty = document.getElementById('leads-empty');
+const leadPageInfo = document.getElementById('lead-page-info');
+
+let campanhaAtual = null;
+let leadPaginaAtual = 1;
+const LEAD_LIMITE = 20;
+let filtroLeadStatus = '';
+let filtroLeadPrioridade = '';
+
+function abrirLeadsDaCampanha(campanha) {
+  campanhaAtual = campanha;
+  leadPaginaAtual = 1;
+  filtroLeadStatus = '';
+  filtroLeadPrioridade = '';
+  document.getElementById('filtro-lead-status').value = '';
+  document.getElementById('filtro-lead-prioridade').value = '';
+
+  document.getElementById('campanha-resumo').innerHTML = `
+    <strong>${escapeHtml(campanha.produto)}</strong><br>
+    Nicho: ${escapeHtml(campanha.nicho)} · Cidade: ${escapeHtml(campanha.cidade)}<br>
+    Objetivo: ${escapeHtml(campanha.objetivo)}<br>
+    Status: ${escapeHtml(STATUS_LABELS[campanha.status] || campanha.status)}
+  `;
+
+  document.getElementById('novo-lead-nomeEmpresa').value = '';
+  document.getElementById('novo-lead-nicho').value = campanha.nicho || '';
+  document.getElementById('novo-lead-cidade').value = campanha.cidade || '';
+  document.getElementById('novo-lead-pais').value = '';
+  document.getElementById('novo-lead-site').value = '';
+  document.getElementById('novo-lead-instagram').value = '';
+  document.getElementById('novo-lead-email').value = '';
+  document.getElementById('novo-lead-telefone').value = '';
+  document.getElementById('novo-lead-googleMapsUrl').value = '';
+  document.getElementById('novo-lead-observacoes').value = '';
+
+  sectionId.textContent = 'Painel / Leads';
+  viewCampanhas.style.display = 'none';
+  viewLeads.style.display = 'block';
+
+  carregarLeads();
+}
+
+document.getElementById('voltar-campanhas').addEventListener('click', () => {
+  campanhaAtual = null;
+  sectionId.textContent = 'Painel / Campanhas';
+  viewLeads.style.display = 'none';
+  viewCampanhas.style.display = 'block';
+});
+
+document.getElementById('lead-anterior').addEventListener('click', () => {
+  if (leadPaginaAtual > 1) {
+    leadPaginaAtual -= 1;
+    carregarLeads();
+  }
+});
+
+document.getElementById('lead-proxima').addEventListener('click', () => {
+  leadPaginaAtual += 1;
+  carregarLeads();
+});
+
+document.getElementById('aplicar-filtros-lead').addEventListener('click', () => {
+  filtroLeadStatus = document.getElementById('filtro-lead-status').value;
+  filtroLeadPrioridade = document.getElementById('filtro-lead-prioridade').value;
+  leadPaginaAtual = 1;
+  carregarLeads();
+});
+
+document.getElementById('limpar-filtros-lead').addEventListener('click', () => {
+  document.getElementById('filtro-lead-status').value = '';
+  document.getElementById('filtro-lead-prioridade').value = '';
+  filtroLeadStatus = '';
+  filtroLeadPrioridade = '';
+  leadPaginaAtual = 1;
+  carregarLeads();
+});
+
+document.getElementById('criar-lead').addEventListener('click', async () => {
+  if (!campanhaAtual) return;
+  const erroForm = document.getElementById('erro-form-lead');
+  erroForm.style.display = 'none';
+
+  const payload = {
+    nomeEmpresa: document.getElementById('novo-lead-nomeEmpresa').value.trim(),
+    nicho: document.getElementById('novo-lead-nicho').value.trim(),
+    cidade: document.getElementById('novo-lead-cidade').value.trim(),
+    pais: document.getElementById('novo-lead-pais').value.trim(),
+    site: document.getElementById('novo-lead-site').value.trim(),
+    instagram: document.getElementById('novo-lead-instagram').value.trim(),
+    email: document.getElementById('novo-lead-email').value.trim(),
+    telefone: document.getElementById('novo-lead-telefone').value.trim(),
+    googleMapsUrl: document.getElementById('novo-lead-googleMapsUrl').value.trim(),
+    observacoes: document.getElementById('novo-lead-observacoes').value.trim(),
+  };
+
+  try {
+    const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível criar o lead.');
+
+    document.getElementById('novo-lead-nomeEmpresa').value = '';
+    document.getElementById('novo-lead-pais').value = '';
+    document.getElementById('novo-lead-site').value = '';
+    document.getElementById('novo-lead-instagram').value = '';
+    document.getElementById('novo-lead-email').value = '';
+    document.getElementById('novo-lead-telefone').value = '';
+    document.getElementById('novo-lead-googleMapsUrl').value = '';
+    document.getElementById('novo-lead-observacoes').value = '';
+
+    leadPaginaAtual = 1;
+    carregarLeads();
+  } catch (err) {
+    erroForm.textContent = err.message;
+    erroForm.style.display = 'block';
+  }
+});
+
+async function carregarLeads() {
+  if (!campanhaAtual) return;
+  try {
+    const params = new URLSearchParams({ page: leadPaginaAtual, limit: LEAD_LIMITE });
+    if (filtroLeadStatus) params.set('status', filtroLeadStatus);
+    if (filtroLeadPrioridade) params.set('prioridade', filtroLeadPrioridade);
+
+    const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads?${params.toString()}`);
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message || 'Não foi possível carregar os leads.');
+    renderLeads(body.data, body.meta);
+  } catch (err) {
+    leadsGrid.innerHTML = '';
+    leadsEmpty.textContent = err.message;
+    leadsEmpty.style.display = 'block';
+  }
+}
+
+function renderLeads(leads, meta) {
+  const totalPaginas = Math.max(Math.ceil(meta.total / meta.limit), 1);
+  leadPageInfo.textContent = `página ${meta.page} de ${totalPaginas} — ${meta.total} lead(s)`;
+
+  if (!leads.length) {
+    leadsGrid.innerHTML = '';
+    leadsEmpty.textContent = 'Nenhum lead encontrado nesta campanha.';
+    leadsEmpty.style.display = 'block';
+    return;
+  }
+
+  leadsEmpty.style.display = 'none';
+
+  leadsGrid.innerHTML = leads.map(lead => {
+    const criado = lead.createdAt ? new Date(lead.createdAt).toLocaleString('pt-PT') : '';
+    const status = lead.status || 'novo';
+    const prioridade = lead.prioridade || 'media';
+
+    const statusOptions = LEAD_STATUSES.map(s =>
+      `<option value="${s}" ${s === status ? 'selected' : ''}>${escapeHtml(LEAD_STATUS_LABELS[s] || s)}</option>`
+    ).join('');
+    const prioridadeOptions = LEAD_PRIORITIES.map(p =>
+      `<option value="${p}" ${p === prioridade ? 'selected' : ''}>${escapeHtml(LEAD_PRIORITY_LABELS[p] || p)}</option>`
+    ).join('');
+
+    return `
+      <div class="card" data-id="${lead._id}">
+        <h3>${escapeHtml(lead.nomeEmpresa)}</h3>
+        <div class="status-tag ${status}">${escapeHtml(LEAD_STATUS_LABELS[status] || status)}</div>
+        <div class="prioridade-tag ${prioridade}">${escapeHtml(LEAD_PRIORITY_LABELS[prioridade] || prioridade)}</div>
+
+        <div class="hairline"></div>
+
+        <div class="field-label">Nicho</div>
+        <input type="text" class="campo-lead-nicho" value="${escapeHtml(lead.nicho)}" maxlength="120">
+
+        <div class="field-label" style="margin-top:10px">Cidade</div>
+        <input type="text" class="campo-lead-cidade" value="${escapeHtml(lead.cidade)}" maxlength="120">
+
+        <div class="field-label" style="margin-top:10px">País</div>
+        <input type="text" class="campo-lead-pais" value="${escapeHtml(lead.pais)}" maxlength="120">
+
+        <div class="field-label" style="margin-top:10px">Site</div>
+        <input type="text" class="campo-lead-site" value="${escapeHtml(lead.site)}" maxlength="300">
+
+        <div class="field-label" style="margin-top:10px">Instagram</div>
+        <input type="text" class="campo-lead-instagram" value="${escapeHtml(lead.instagram)}" maxlength="200">
+
+        <div class="field-label" style="margin-top:10px">Email</div>
+        <input type="text" class="campo-lead-email" value="${escapeHtml(lead.email)}" maxlength="200">
+
+        <div class="field-label" style="margin-top:10px">Telefone</div>
+        <input type="text" class="campo-lead-telefone" value="${escapeHtml(lead.telefone)}" maxlength="60">
+
+        <div class="field-label" style="margin-top:10px">Google Maps</div>
+        <input type="text" class="campo-lead-googleMapsUrl" value="${escapeHtml(lead.googleMapsUrl)}" maxlength="500">
+
+        <div class="field-label" style="margin-top:10px">Observações</div>
+        <textarea class="campo-lead-observacoes" maxlength="2000">${escapeHtml(lead.observacoes)}</textarea>
+
+        <div class="field-label" style="margin-top:10px">Status</div>
+        <select class="campo-lead-status">${statusOptions}</select>
+
+        <div class="field-label" style="margin-top:10px">Prioridade</div>
+        <select class="campo-lead-prioridade">${prioridadeOptions}</select>
+
+        <div class="meta-row"><span>${criado}</span></div>
+
+        <button class="btn-salvar btn-salvar-lead" data-id="${lead._id}">Salvar alterações</button>
+      </div>
+    `;
+  }).join('');
+
+  bindEventsLeads();
+}
+
+function bindEventsLeads() {
+  document.querySelectorAll('.btn-salvar-lead').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!campanhaAtual) return;
+      const id = btn.dataset.id;
+      const card = btn.closest('.card');
+
+      const payload = {
+        nicho: card.querySelector('.campo-lead-nicho').value.trim(),
+        cidade: card.querySelector('.campo-lead-cidade').value.trim(),
+        pais: card.querySelector('.campo-lead-pais').value.trim(),
+        site: card.querySelector('.campo-lead-site').value.trim(),
+        instagram: card.querySelector('.campo-lead-instagram').value.trim(),
+        email: card.querySelector('.campo-lead-email').value.trim(),
+        telefone: card.querySelector('.campo-lead-telefone').value.trim(),
+        googleMapsUrl: card.querySelector('.campo-lead-googleMapsUrl').value.trim(),
+        observacoes: card.querySelector('.campo-lead-observacoes').value.trim(),
+        status: card.querySelector('.campo-lead-status').value,
+        prioridade: card.querySelector('.campo-lead-prioridade').value,
+      };
+
+      try {
+        const res = await fetch(`/api/radar/campaigns/${campanhaAtual.id}/leads/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error?.message || 'Falha ao salvar.');
+
+        const statusTag = card.querySelector('.status-tag');
+        statusTag.textContent = LEAD_STATUS_LABELS[payload.status] || payload.status;
+        statusTag.className = `status-tag ${payload.status}`;
+
+        const prioridadeTag = card.querySelector('.prioridade-tag');
+        prioridadeTag.textContent = LEAD_PRIORITY_LABELS[payload.prioridade] || payload.prioridade;
+        prioridadeTag.className = `prioridade-tag ${payload.prioridade}`;
+
+        btn.classList.add('saved');
+        btn.textContent = 'Salvo';
+        setTimeout(() => {
+          btn.classList.remove('saved');
+          btn.textContent = 'Salvar alterações';
+        }, 1600);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   popularFiltros();
-  carregar();
+  carregarCampanhas();
 });
 </script>
 </body>
