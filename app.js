@@ -76,6 +76,18 @@ app.get('/painel', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'central.html'));
 });
 
+app.get('/painel/briefings', requireAdminSession, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/painel/diagnostico', requireAdminSession, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-diagnostico.html'));
+});
+
+app.get('/painel/radar', requireAdminSession, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-radar.html'));
+});
+
 app.get('/diagnostico', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'diagnostico.html'));
 });

@@ -36,3 +36,43 @@ describe('GET /painel', () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe.each([
+  ['/painel/briefings'],
+  ['/painel/diagnostico'],
+  ['/painel/radar'],
+])('GET %s (rota nova, convenção /painel/...)', (rota) => {
+  test('sem sessão redireciona para /login.html', async () => {
+    const res = await request(app).get(rota);
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/login.html');
+  });
+
+  test('com sessão válida retorna 200', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/login').send({ senha: 'test-key' });
+
+    const res = await agent.get(rota);
+    expect(res.status).toBe(200);
+  });
+});
+
+describe.each([
+  ['/admin.html'],
+  ['/admin-diagnostico.html'],
+  ['/admin-radar.html'],
+])('GET %s (rota antiga, não regride com a migração para /painel/...)', (rota) => {
+  test('sem sessão redireciona para /login.html', async () => {
+    const res = await request(app).get(rota);
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/login.html');
+  });
+
+  test('com sessão válida retorna 200', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/login').send({ senha: 'test-key' });
+
+    const res = await agent.get(rota);
+    expect(res.status).toBe(200);
+  });
+});
