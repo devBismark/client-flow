@@ -593,6 +593,7 @@ function render(projetos) {
 
         <div class="link-row">
           <button class="btn-link copy-link" data-token="${p.proposalToken}">Copiarlink</button>
+          <button class="btn-link copy-message" data-token="${p.proposalToken}">Copiar mensagem</button>
           <a class="btn-link" href="/proposta.html?t=${p.proposalToken}" target="_blank" rel="noopener">Ver proposta</a>
           ${p.photoUrls && p.photoUrls.length ? `<button class="btn-link download-photos">Baixar fotos (${p.photoUrls.length})</button>` : ''}
         </div>
@@ -654,6 +655,21 @@ function bindEvents() {
       btn.textContent = 'Guardado';
       setTimeout(carregar, 700);
     });
+
+    const copyMessageBtn = card.querySelector('.copy-message');
+    if (copyMessageBtn) {
+      copyMessageBtn.addEventListener('click', async () => {
+        const url = `${window.location.origin}/proposta.html?t=${copyMessageBtn.dataset.token}`;
+        const mensagem = `Olá! Preparei a tua proposta com base no briefing que enviaste. Dá uma vista de olhos aqui: ${url}\n\nSe fizer sentido para ti, seguimos a partir daí com os próximos passos.`;
+        await navigator.clipboard.writeText(mensagem);
+        copyMessageBtn.classList.add('copied');
+        copyMessageBtn.textContent = 'Copiado';
+        setTimeout(() => {
+          copyMessageBtn.classList.remove('copied');
+          copyMessageBtn.textContent = 'Copiar mensagem';
+        }, 1600);
+      });
+    }
 
     const downloadBtn = card.querySelector('.download-photos');
     if (downloadBtn) {

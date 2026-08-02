@@ -355,6 +355,26 @@ describe('DELETE /api/projects/:id', () => {
   });
 });
 
+describe('public/admin.html — botão "Copiar mensagem"', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('o card tem botão "Copiar mensagem" com o token da proposta', () => {
+    expect(html).toContain('copy-message');
+    expect(html).toContain('Copiar mensagem');
+    expect(html).toMatch(/copy-message[^>]*data-token="\$\{p\.proposalToken\}"/);
+  });
+
+  test('a mensagem copiada reaproveita o link público da proposta, sem preço/prazo/notas', () => {
+    expect(html).toMatch(/copyMessageBtn[\s\S]{0,400}proposta\.html\?t=\$\{copyMessageBtn\.dataset\.token\}/);
+    expect(html).not.toMatch(/mensagem[\s\S]{0,400}p\.notes/);
+  });
+});
+
 describe('rotas inexistentes', () => {
   test('404 com mensagem padrão', async () => {
     const res = await request(app).get('/api/nao-existe');
