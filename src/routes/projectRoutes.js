@@ -12,8 +12,31 @@ const { ZipArchive } = require('archiver');
 const projectsAdminLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 60,
-  methods: ['GET', 'PATCH'],
+  methods: ['GET', 'PATCH', 'DELETE'],
 });
+
+function maskIp(ip) {
+  if (!ip) return null;
+
+  const ipv4Mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+)\.\d+$/i);
+  if (ipv4Mapped) {
+    return `::ffff:${ipv4Mapped[1]}.xxx`;
+  }
+
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+    return ip.replace(/\.\d+$/, '.xxx');
+  }
+
+  if (ip.includes(':')) {
+    return '[ipv6-masked]';
+  }
+
+  return '[ip-masked]';
+}
+
+function logAudit(event, data) {
+  console.info(`[audit] ${JSON.stringify({ event, ...data, at: new Date().toISOString() })}`);
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -232,6 +255,27 @@ router.get('/:id/download-photos', projectsAdminLimiter, requireAdminKey, async 
     }
 
     await archive.finalize();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/projects/:id — admin, remove
+router.delete('/:id', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
+  try {
+    const project = await Project.findByIdAndDelete(req.params.id);
+    if (!project) {
+      return res.status(404).json({ error: { message: 'Projeto não encontrado' } });
+    }
+
+    logAudit('project_deleted', {
+      projectId: String(project._id),
+      status: project.status,
+      createdAt: project.createdAt,
+      ip: maskIp(req.ip),
+    });
+
+    res.json({ data: { _id: project._id } });
   } catch (error) {
     next(error);
   }

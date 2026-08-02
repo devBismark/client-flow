@@ -287,6 +287,74 @@ describe('PATCH /api/projects/:id', () => {
   });
 });
 
+describe('DELETE /api/projects/:id', () => {
+  test('401 sem admin key', async () => {
+    const projeto = await criarProjeto();
+    const res = await request(app).delete(`/api/projects/${projeto._id}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('remove projeto existente e confirma via GET subsequente (404)', async () => {
+    const projeto = await criarProjeto();
+    const del = await request(app).delete(`/api/projects/${projeto._id}`).set(AUTH);
+    expect(del.status).toBe(200);
+    expect(del.body.data._id).toBe(projeto._id);
+
+    const get = await request(app).get(`/api/projects/${projeto._id}`).set(AUTH);
+    expect(get.status).toBe(404);
+  });
+
+  test('404 para id inexistente', async () => {
+    const res = await request(app)
+      .delete('/api/projects/000000000000000000000000')
+      .set(AUTH);
+    expect(res.status).toBe(404);
+  });
+
+  test('registra log de auditoria ao remover um projeto existente', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const projeto = await criarProjeto();
+
+    await request(app).delete(`/api/projects/${projeto._id}`).set(AUTH);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const logged = spy.mock.calls[0][0];
+    expect(logged).toContain('[audit]');
+    expect(logged).toContain('project_deleted');
+    expect(logged).toContain(projeto._id);
+
+    spy.mockRestore();
+  });
+
+  test('log de remoção não contém clientName nem clientContact', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const projeto = await criarProjeto({
+      clientName: 'NOME_QUE_NAO_PODE_VAZAR_NO_LOG',
+      clientContact: 'segredo@naopodeaparecer.com',
+    });
+
+    await request(app).delete(`/api/projects/${projeto._id}`).set(AUTH);
+
+    const logged = spy.mock.calls[0][0];
+    expect(logged).not.toContain('NOME_QUE_NAO_PODE_VAZAR_NO_LOG');
+    expect(logged).not.toContain('segredo@naopodeaparecer.com');
+
+    spy.mockRestore();
+  });
+
+  test('não loga nada quando o id não existe (404)', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+
+    await request(app)
+      .delete('/api/projects/000000000000000000000000')
+      .set(AUTH);
+
+    expect(spy).not.toHaveBeenCalled();
+
+    spy.mockRestore();
+  });
+});
+
 describe('rotas inexistentes', () => {
   test('404 com mensagem padrão', async () => {
     const res = await request(app).get('/api/nao-existe');
