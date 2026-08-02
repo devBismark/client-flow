@@ -138,7 +138,7 @@
   <p class="index">Briefing especializado — Sites e Landing Pages</p>
   <h1>Conta um pouco<br>sobre o teu site ou landing page</h1>
   <p class="lead">A IDISTØPIC cria sites e landing pages com apoio de IA, checagem técnica e validação de qualidade em cada etapa. Estas perguntas ajudam-nos a perceber o que o teu projeto precisa — leva menos de cinco minutos.</p>
-  <p class="pointer">Procuras outra coisa — automações, sistemas com IA, SaaS ou integrações? Usa o <a href="/diagnostico">diagnóstico rápido</a> em vez deste formulário.</p>
+  <p class="pointer">Procuras outra coisa — automações, sistemas com IA, SaaS ou integrações? Usa o <a href="/diagnostico">diagnóstico rápido</a> em vez deste formulário. Já entregámos projetos reais — vê alguns em <a href="/trabalhos">/trabalhos</a>.</p>
 
   <div class="field">
     <label class="cap" for="nome">Nome do negócio</label>
@@ -147,6 +147,7 @@
 
   <div class="field">
     <label class="cap" for="contato">Contacto</label>
+    <span class="hint">Os teus dados são usados só para preparar a tua proposta.</span>
     <input type="text" id="contato" placeholder="@onegocio ou email" autocomplete="email">
   </div>
 
@@ -183,7 +184,7 @@
     </label>
     <input type="file" id="photos" accept="image/*" multiple style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden;">
     <div class="counter" id="photosCounter">0 / 10 fotos selecionadas</div>
-    <span class="hint" style="margin-top:8px;">As fotos são usadas só para perceber o teu negócio e preparar a proposta.</span>
+    <span class="hint" style="margin-top:8px;">As fotos são usadas só para perceber o teu negócio e preparar a proposta — não são partilhadas nem publicadas sem o teu acordo.</span>
   </div>
 
   <div class="section">Âmbito</div>
@@ -220,6 +221,7 @@
     </label>
   </fieldset>
 
+  <p class="hint">Depois do envio, analisamos o briefing e devolvemos uma proposta com escopo, próximos passos e investimento estimado.</p>
   <button id="enviar">Enviar briefing</button>
   <div class="msg" id="msg"></div>
 
@@ -312,7 +314,7 @@ btn.addEventListener('click', async () => {
     if (!res.ok) throw new Error(body.error?.message || 'Não foi possível enviar. Tenta outra vez.');
 
     msg.className = 'msg ok';
-    msg.textContent = 'Briefing recebido. Vamos analisar as tuas respostas e entrar em contacto em breve com a proposta.';
+    msg.textContent = 'Briefing recebido. Vamos analisar as tuas respostas e entrar em contacto em até 2 dias úteis com a proposta.';
 
     document.querySelectorAll('input, textarea').forEach(el => {
       if (el.type === 'checkbox') el.checked = false;
