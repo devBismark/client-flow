@@ -592,7 +592,7 @@ function render(projetos) {
         </div>
 
         <div class="link-row">
-          <button class="btn-link copy-link" data-token="${p.proposalToken}">Copiarlink</button>
+          <button class="btn-link copy-link" data-token="${p.proposalToken}">Copiar link</button>
           <button class="btn-link copy-message" data-token="${p.proposalToken}">Copiar mensagem</button>
           <a class="btn-link" href="/proposta.html?t=${p.proposalToken}" target="_blank" rel="noopener">Ver proposta</a>
           ${p.photoUrls && p.photoUrls.length ? `<button class="btn-link download-photos">Baixar fotos (${p.photoUrls.length})</button>` : ''}
@@ -618,19 +618,7 @@ function render(projetos) {
 
   bindEvents();
 }
-document.querySelectorAll('.copy-link').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const url = `${window.location.origin}/proposta.html?t=${btn.dataset.token}`;
-      await navigator.clipboard.writeText(url);
-      btn.classList.add('copied');
-      btn.textContent = 'Copiado';
-      setTimeout(() => {
-        btn.classList.remove('copied');
-        btn.textContent = 'Copiar link';
-      }, 1600);
-    });
-  });
-  
+
 function bindEvents() {
   document.querySelectorAll('.toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -655,6 +643,20 @@ function bindEvents() {
       btn.textContent = 'Guardado';
       setTimeout(carregar, 700);
     });
+
+    const copyLinkBtn = card.querySelector('.copy-link');
+    if (copyLinkBtn) {
+      copyLinkBtn.addEventListener('click', async () => {
+        const url = `${window.location.origin}/proposta.html?t=${copyLinkBtn.dataset.token}`;
+        await navigator.clipboard.writeText(url);
+        copyLinkBtn.classList.add('copied');
+        copyLinkBtn.textContent = 'Copiado';
+        setTimeout(() => {
+          copyLinkBtn.classList.remove('copied');
+          copyLinkBtn.textContent = 'Copiar link';
+        }, 1600);
+      });
+    }
 
     const copyMessageBtn = card.querySelector('.copy-message');
     if (copyMessageBtn) {

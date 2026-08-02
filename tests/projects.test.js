@@ -375,6 +375,29 @@ describe('public/admin.html — botão "Copiar mensagem"', () => {
   });
 });
 
+describe('public/admin.html — botão "Copiar link" (correção do bug pré-existente)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('o rótulo do botão é "Copiar link", não "Copiarlink"', () => {
+    expect(html).toContain('>Copiar link</button>');
+    expect(html).not.toContain('>Copiarlink</button>');
+  });
+
+  test('o handler de .copy-link está dentro do card (bindEvents), não anexado no topo do script antes de qualquer card existir', () => {
+    expect(html).toContain("card.querySelector('.copy-link')");
+    expect(html).not.toMatch(/document\.querySelectorAll\('\.copy-link'\)/);
+  });
+
+  test('o handler copia o mesmo link público já usado por "Ver proposta"', () => {
+    expect(html).toMatch(/copyLinkBtn[\s\S]{0,300}proposta\.html\?t=\$\{copyLinkBtn\.dataset\.token\}/);
+  });
+});
+
 describe('rotas inexistentes', () => {
   test('404 com mensagem padrão', async () => {
     const res = await request(app).get('/api/nao-existe');
