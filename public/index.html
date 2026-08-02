@@ -17,6 +17,14 @@
     --muted: #7C828C;
     --glass: rgba(255,255,255,0.03);
     --hairline: rgba(255,255,255,0.08);
+    /* Continuidade de marca (2026-08-02) — mesmos valores de acento de
+       core/identity.md / idistopic-landing/styles.css. Paleta --void/--steel-*
+       acima mantida como base (compatível com "dark premium tech"); estas
+       duas cores passam a ser o acento de interação em toda a página, no
+       lugar de --steel-2 sozinho. Fonte (Orbitron/Space Mono via Google
+       Fonts) e camada técnica (grid/frame/cantos) não tocadas nesta rodada. */
+    --cor-ciano: #00F0FF;
+    --cor-verde: #39FF14;
   }
   * { box-sizing: border-box; }
   body {
@@ -37,17 +45,19 @@
     pointer-events: none; z-index: 0;
   }
   .wrap { position: relative; z-index: 1; max-width: 620px; margin: 0 auto; padding: 64px 24px 96px; }
+  .back-link { display: inline-block; font-size: 11px; letter-spacing: .06em; color: var(--steel-3); text-decoration: none; margin-bottom: 24px; transition: color .2s ease; }
+  .back-link:hover { color: var(--cor-ciano); }
   .mark {
-    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: .34em;
-    background: linear-gradient(100deg, #FFFFFF 0%, var(--steel-2) 28%, var(--steel-1) 52%, var(--steel-2) 74%, #FFFFFF 100%);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 40px;
+    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: .34em; margin-bottom: 40px;
   }
-  .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--steel-1) 15%, var(--steel-2) 50%, var(--steel-1) 85%, transparent); opacity: .5; margin: 0 0 40px; }
-  .index { font-size: 10px; letter-spacing: .28em; color: var(--steel-3); text-transform: uppercase; margin-bottom: 14px; }
+  .mark .cyan { color: var(--cor-ciano); }
+  .mark .green { color: var(--cor-verde); }
+  .rule { height: 1px; background: linear-gradient(90deg, var(--cor-ciano), var(--cor-verde)); opacity: .35; margin: 0 0 40px; }
+  .index { font-size: 10px; letter-spacing: .28em; color: var(--cor-ciano); text-transform: uppercase; margin-bottom: 14px; }
   h1 { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 27px; line-height: 1.28; letter-spacing: .01em; margin: 0 0 14px; }
   .lead { font-size: 13px; line-height: 1.75; color: var(--muted); margin: 0 0 48px; max-width: 46ch; }
   .pointer { font-size: 11px; color: #4E535B; line-height: 1.6; margin: -28px 0 40px; max-width: 46ch; }
-  .pointer a { color: var(--steel-2); }
+  .pointer a { color: var(--cor-ciano); }
   .section { font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--steel-3); margin: 52px 0 22px; display: flex; align-items: center; gap: 14px; }
   .section::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--hairline), transparent); }
   .field { margin-bottom: 26px; }
@@ -58,14 +68,14 @@
     color: var(--text); font-family: 'Space Mono', monospace; font-size: 15px; transition: border-color .25s ease;
   }
   input[type=text]::placeholder { color: #3C4048; }
-  input[type=text]:focus { outline: none; border-bottom-color: var(--steel-2); }
+  input[type=text]:focus { outline: none; border-bottom-color: var(--cor-ciano); }
   textarea {
     width: 100%; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     border: 1px solid var(--hairline); border-radius: 3px; padding: 14px; color: var(--text);
     font-family: 'Space Mono', monospace; font-size: 13.5px; line-height: 1.7; min-height: 96px; resize: vertical; transition: border-color .25s ease;
   }
   textarea::placeholder { color: #3C4048; }
-  textarea:focus { outline: none; border-color: var(--steel-2); }
+  textarea:focus { outline: none; border-color: var(--cor-ciano); }
   .counter { text-align: right; font-size: 10px; color: #3C4048; margin-top: 6px; letter-spacing: .06em; }
   .counter.near { color: var(--steel-3); }
   fieldset { border: 0; padding: 0; margin: 0; }
@@ -75,13 +85,13 @@
     border: 1px solid var(--hairline); border-radius: 3px; padding: 15px 16px; margin-bottom: 8px;
     cursor: pointer; position: relative; transition: border-color .22s ease, background .22s ease;
   }
-  .q:hover { border-color: rgba(201,205,212,0.24); }
+  .q:hover { border-color: rgba(0,240,255,0.24); }
   .q input { position: absolute; opacity: 0; pointer-events: none; }
   .box { width: 13px; height: 13px; border: 1px solid var(--steel-1); border-radius: 1px; position: relative; transition: all .2s ease; }
-  .box::after { content: ''; position: absolute; inset: 2px; background: linear-gradient(135deg, #FFFFFF, var(--steel-2)); opacity: 0; transition: opacity .2s ease; }
-  .q input:checked ~ .box { border-color: var(--steel-2); }
+  .box::after { content: ''; position: absolute; inset: 2px; background: linear-gradient(135deg, #FFFFFF, var(--cor-ciano)); opacity: 0; transition: opacity .2s ease; }
+  .q input:checked ~ .box { border-color: var(--cor-ciano); }
   .q input:checked ~ .box::after { opacity: 1; }
-  .q input:focus-visible ~ .box { outline: 1px solid var(--steel-2); outline-offset: 3px; }
+  .q input:focus-visible ~ .box { outline: 1px solid var(--cor-ciano); outline-offset: 3px; }
   .q span { font-size: 13px; line-height: 1.6; color: #C4C8CE; }
   .q input:checked ~ span { color: var(--text); }
   .filebox {
@@ -90,7 +100,7 @@
     font-size: 12px; letter-spacing: .08em; color: #C4C8CE; cursor: pointer; transition: border-color .22s ease;
   }
   .filebox:hover { border-color: rgba(201,205,212,0.24); }
-  .filebox:focus-within { border-color: var(--steel-2); }
+  .filebox:focus-within { border-color: var(--cor-ciano); }
   button {
     width: 100%; margin-top: 44px; background: transparent; color: var(--text); border: 1px solid var(--steel-1);
     border-radius: 2px; padding: 17px; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 11px;
@@ -102,14 +112,14 @@
     background: linear-gradient(100deg, transparent, rgba(255,255,255,0.09), transparent);
     transform: translateX(-100%); transition: transform .6s ease;
   }
-  button:hover:not(:disabled) { border-color: var(--steel-2); }
+  button:hover:not(:disabled) { border-color: var(--cor-ciano); }
   button:hover:not(:disabled)::before { transform: translateX(100%); }
   button:disabled { opacity: .35; cursor: not-allowed; }
   .msg {
     display: none; margin-top: 24px; padding: 16px 18px; border-radius: 2px; font-size: 12.5px; line-height: 1.65;
     background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-left: 2px solid;
   }
-  .msg.ok { display: block; border-left-color: var(--steel-2); color: #D8DCE2; }
+  .msg.ok { display: block; border-left-color: var(--cor-ciano); color: #D8DCE2; }
   .msg.err { display: block; border-left-color: #A85A5A; color: #E0BCBC; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   @media (max-width: 560px) { .wrap { padding: 44px 20px 72px; } h1 { font-size: 22px; } }
@@ -118,14 +128,16 @@
 <body>
 <div class="wrap">
 
+  <a href="/" class="back-link">← Voltar para a home</a>
+
   <a href="https://idistopic.com" style="text-decoration:none; color:inherit;">
-    <div class="mark">IDISTØPIC</div>
+    <div class="mark"><span class="cyan">IDIST</span><span class="green">ØPIC</span></div>
   </a>
   <div class="rule"></div>
 
   <p class="index">Briefing especializado — Sites e Landing Pages</p>
   <h1>Conta um pouco<br>sobre o teu site ou landing page</h1>
-  <p class="lead">Algumas perguntas para eu perceber o que o teu site precisa. Leva menos de cinco minutos.</p>
+  <p class="lead">A IDISTØPIC cria sites e landing pages com apoio de IA, checagem técnica e validação de qualidade em cada etapa. Estas perguntas ajudam-nos a perceber o que o teu projeto precisa — leva menos de cinco minutos.</p>
   <p class="pointer">Procuras outra coisa — automações, sistemas com IA, SaaS ou integrações? Usa o <a href="/diagnostico">diagnóstico rápido</a> em vez deste formulário.</p>
 
   <div class="field">
@@ -171,6 +183,7 @@
     </label>
     <input type="file" id="photos" accept="image/*" multiple style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden;">
     <div class="counter" id="photosCounter">0 / 10 fotos selecionadas</div>
+    <span class="hint" style="margin-top:8px;">As fotos são usadas só para perceber o teu negócio e preparar a proposta.</span>
   </div>
 
   <div class="section">Âmbito</div>
@@ -299,7 +312,7 @@ btn.addEventListener('click', async () => {
     if (!res.ok) throw new Error(body.error?.message || 'Não foi possível enviar. Tenta outra vez.');
 
     msg.className = 'msg ok';
-    msg.textContent = 'Briefing recebido. Entro em contacto em breve com a proposta.';
+    msg.textContent = 'Briefing recebido. Vamos analisar as tuas respostas e entrar em contacto em breve com a proposta.';
 
     document.querySelectorAll('input, textarea').forEach(el => {
       if (el.type === 'checkbox') el.checked = false;
