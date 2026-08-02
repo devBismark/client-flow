@@ -398,6 +398,38 @@ describe('public/admin.html — botão "Copiar link" (correção do bug pré-exi
   });
 });
 
+describe('public/admin.html — botões "Copiar follow-up 1"/"Copiar follow-up 2"', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('os dois botões só são renderizados quando o status é "orcamento_enviado"', () => {
+    expect(html).toMatch(/p\.status === 'orcamento_enviado'[\s\S]{0,80}copy-followup1/);
+    expect(html).toMatch(/p\.status === 'orcamento_enviado'[\s\S]{0,80}copy-followup2/);
+  });
+
+  test('os handlers copiam o link público da proposta, sem gravar nada no banco', () => {
+    const handler1 = html.match(/copyFollowup1Btn\.addEventListener\('click', async \(\) => \{[\s\S]*?\}\);/)[0];
+    const handler2 = html.match(/copyFollowup2Btn\.addEventListener\('click', async \(\) => \{[\s\S]*?\}\);/)[0];
+
+    expect(handler1).toContain('proposta.html?t=${copyFollowup1Btn.dataset.token}');
+    expect(handler2).toContain('proposta.html?t=${copyFollowup2Btn.dataset.token}');
+    expect(handler1).not.toContain('fetch(');
+    expect(handler2).not.toContain('fetch(');
+  });
+
+  test('nenhum dos handlers de follow-up usa updatedAt', () => {
+    const handler1 = html.match(/copyFollowup1Btn\.addEventListener\('click', async \(\) => \{[\s\S]*?\}\);/)[0];
+    const handler2 = html.match(/copyFollowup2Btn\.addEventListener\('click', async \(\) => \{[\s\S]*?\}\);/)[0];
+
+    expect(handler1).not.toContain('updatedAt');
+    expect(handler2).not.toContain('updatedAt');
+  });
+});
+
 describe('rotas inexistentes', () => {
   test('404 com mensagem padrão', async () => {
     const res = await request(app).get('/api/nao-existe');

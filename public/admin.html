@@ -594,6 +594,8 @@ function render(projetos) {
         <div class="link-row">
           <button class="btn-link copy-link" data-token="${p.proposalToken}">Copiar link</button>
           <button class="btn-link copy-message" data-token="${p.proposalToken}">Copiar mensagem</button>
+          ${p.status === 'orcamento_enviado' ? `<button class="btn-link copy-followup1" data-token="${p.proposalToken}">Copiar follow-up 1</button>` : ''}
+          ${p.status === 'orcamento_enviado' ? `<button class="btn-link copy-followup2" data-token="${p.proposalToken}">Copiar follow-up 2</button>` : ''}
           <a class="btn-link" href="/proposta.html?t=${p.proposalToken}" target="_blank" rel="noopener">Ver proposta</a>
           ${p.photoUrls && p.photoUrls.length ? `<button class="btn-link download-photos">Baixar fotos (${p.photoUrls.length})</button>` : ''}
         </div>
@@ -669,6 +671,36 @@ function bindEvents() {
         setTimeout(() => {
           copyMessageBtn.classList.remove('copied');
           copyMessageBtn.textContent = 'Copiar mensagem';
+        }, 1600);
+      });
+    }
+
+    const copyFollowup1Btn = card.querySelector('.copy-followup1');
+    if (copyFollowup1Btn) {
+      copyFollowup1Btn.addEventListener('click', async () => {
+        const url = `${window.location.origin}/proposta.html?t=${copyFollowup1Btn.dataset.token}`;
+        const mensagem = `Olá! Passei para saber se conseguiste dar uma vista de olhos na proposta. Qualquer dúvida, estou por aqui.\n\nLink da proposta: ${url}`;
+        await navigator.clipboard.writeText(mensagem);
+        copyFollowup1Btn.classList.add('copied');
+        copyFollowup1Btn.textContent = 'Copiado';
+        setTimeout(() => {
+          copyFollowup1Btn.classList.remove('copied');
+          copyFollowup1Btn.textContent = 'Copiar follow-up 1';
+        }, 1600);
+      });
+    }
+
+    const copyFollowup2Btn = card.querySelector('.copy-followup2');
+    if (copyFollowup2Btn) {
+      copyFollowup2Btn.addEventListener('click', async () => {
+        const url = `${window.location.origin}/proposta.html?t=${copyFollowup2Btn.dataset.token}`;
+        const mensagem = `Olá! Ainda estás interessado em avançar com o projeto? Se algo na proposta não fizer sentido, posso ajustar o âmbito — é só dizeres.\n\nLink da proposta: ${url}`;
+        await navigator.clipboard.writeText(mensagem);
+        copyFollowup2Btn.classList.add('copied');
+        copyFollowup2Btn.textContent = 'Copiado';
+        setTimeout(() => {
+          copyFollowup2Btn.classList.remove('copied');
+          copyFollowup2Btn.textContent = 'Copiar follow-up 2';
         }, 1600);
       });
     }
