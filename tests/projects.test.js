@@ -430,6 +430,25 @@ describe('public/admin.html — botões "Copiar follow-up 1"/"Copiar follow-up 2
   });
 });
 
+describe('public/admin.html — botão "Guardar" salva o status (correção do select sem persistência)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('o handler de "Guardar" lê o valor atual do select de status', () => {
+    const handler = html.match(/card\.querySelector\('\.save'\)\.addEventListener\('click', async \(e\) => \{[\s\S]*?setTimeout\(carregar, 700\);\s*\}\);/)[0];
+    expect(handler).toContain("card.querySelector('.status').value");
+  });
+
+  test('o handler de "Guardar" persiste o status usando a rota já existente PATCH /:id/status', () => {
+    const handler = html.match(/card\.querySelector\('\.save'\)\.addEventListener\('click', async \(e\) => \{[\s\S]*?setTimeout\(carregar, 700\);\s*\}\);/)[0];
+    expect(handler).toContain('patch(`/api/projects/${id}/status`, { status })');
+  });
+});
+
 describe('rotas inexistentes', () => {
   test('404 com mensagem padrão', async () => {
     const res = await request(app).get('/api/nao-existe');

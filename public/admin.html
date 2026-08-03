@@ -637,8 +637,10 @@ function bindEvents() {
     card.querySelector('.save').addEventListener('click', async (e) => {
       const finalTier = card.querySelector('.tier-select').value || null;
       const notes = card.querySelector('.notes').value;
+      const status = card.querySelector('.status').value;
 
       await patch(`/api/projects/${id}`, { finalTier, notes });
+      await patch(`/api/projects/${id}/status`, { status });
 
       const btn = e.target;
       btn.classList.add('saved');
