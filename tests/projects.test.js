@@ -594,6 +594,94 @@ describe('public/admin.html — indicadores de tracking', () => {
   });
 });
 
+describe('public/admin.html — "Resumo comercial" (commercial-pipeline-v1)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('existe um bloco de resumo comercial com os 3 contadores pedidos', () => {
+    expect(html).toContain('resumo-comercial');
+    expect(html).toMatch(/briefings recebidos/i);
+    expect(html).toMatch(/propostas enviadas/i);
+    expect(html).toMatch(/follow-ups feitos/i);
+  });
+
+  test('o resumo deixa explícito que considera só a página carregada, não o banco inteiro', () => {
+    expect(html).toMatch(/p[aá]gina[\s\S]{0,40}(carregad|banco)|carregad[\s\S]{0,40}p[aá]gina/i);
+  });
+
+  test('ganhos/perdidos não é exibido como contador (não existe rótulo visível no HTML), e há um comentário explicando por que', () => {
+    expect(html).not.toMatch(/>\s*ganhos?\s*\/\s*perdidos?/i);
+    expect(html).toMatch(/enum[\s\S]{0,80}não tem|não tem[\s\S]{0,80}enum/i);
+  });
+
+  test('calcularResumo deriva "propostas enviadas" de status !== briefing, e "follow-ups feitos" soma followUpCount', () => {
+    const fn = html.match(/function calcularResumo\([\s\S]*?\n\}/)?.[0];
+    expect(fn).toBeTruthy();
+    expect(fn).toContain("status !== 'briefing'");
+    expect(fn).toMatch(/followUpCount/);
+  });
+
+  test('o resumo é recalculado a cada render (render() chama renderResumo, que usa calcularResumo)', () => {
+    expect(html).toMatch(/function render\(projetos\) \{\s*renderResumo\(projetos\)/);
+    const resumoFn = html.match(/function renderResumo\([\s\S]*?\n\}/)?.[0];
+    expect(resumoFn).toBeTruthy();
+    expect(resumoFn).toContain('calcularResumo');
+  });
+
+  test('nenhuma rota nova de API é chamada para o resumo — só usa os dados já carregados', () => {
+    const fn = html.match(/function calcularResumo\([\s\S]*?\n\}/)?.[0];
+    expect(fn).not.toContain('fetch(');
+  });
+});
+
+describe('public/admin.html — destaque "precisa de follow-up" (commercial-pipeline-v1)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('existe uma função precisaFollowUp que só considera status orcamento_enviado', () => {
+    const fn = html.match(/function precisaFollowUp\([\s\S]*?\n\}/)?.[0];
+    expect(fn).toBeTruthy();
+    expect(fn).toContain("'orcamento_enviado'");
+  });
+
+  test('usa o limiar de 48h quando followUpCount é 0, baseado em statusChangedAt', () => {
+    const fn = html.match(/function precisaFollowUp\([\s\S]*?\n\}/)?.[0];
+    expect(fn).toMatch(/followUpCount === 0/);
+    expect(fn).toContain('statusChangedAt');
+    expect(fn).toMatch(/48/);
+  });
+
+  test('usa um limiar de dias quando followUpCount é 1, baseado em lastFollowUpAt', () => {
+    const fn = html.match(/function precisaFollowUp\([\s\S]*?\n\}/)?.[0];
+    expect(fn).toMatch(/followUpCount === 1/);
+    expect(fn).toContain('lastFollowUpAt');
+  });
+
+  test('sem statusChangedAt/lastFollowUpAt, não destaca (nunca inventa urgência sem dado)', () => {
+    const fn = html.match(/function precisaFollowUp\([\s\S]*?\n\}/)?.[0];
+    expect(fn).toMatch(/if \(!p\.statusChangedAt\) return false/);
+    expect(fn).toMatch(/if \(!p\.lastFollowUpAt\) return false/);
+  });
+
+  test('o card aplica uma classe de destaque condicionada a precisaFollowUp(p)', () => {
+    expect(html).toMatch(/precisaFollowUp\(p\)[\s\S]{0,120}precisa-followup/);
+  });
+
+  test('nenhum toggle, reordenação, filtro server-side ou rota nova foi introduzido nesta versão', () => {
+    expect(html).not.toContain('sort-urgencia');
+    expect(html).not.toContain('?precisaAcao');
+    expect(html).not.toContain('toggle-acao');
+  });
+});
+
 describe('rotas inexistentes', () => {
   test('404 com mensagem padrão', async () => {
     const res = await request(app).get('/api/nao-existe');

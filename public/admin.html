@@ -410,6 +410,68 @@
     letter-spacing: .04em;
   }
 
+  /* ─── resumo comercial ───────────────── */
+
+  .resumo-comercial {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .resumo-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .resumo-item strong {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--text);
+  }
+
+  .resumo-item span {
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--steel-3);
+  }
+
+  .resumo-nota {
+    font-size: 10.5px;
+    color: var(--steel-3);
+    font-style: italic;
+    margin-bottom: 30px;
+  }
+
+  /* ─── destaque "precisa de follow-up" ───── */
+
+  .card.precisa-followup {
+    border-color: rgba(168,90,90,0.45);
+  }
+
+  .card.precisa-followup::before {
+    background: linear-gradient(90deg, transparent, var(--danger) 50%, transparent);
+    opacity: .6;
+  }
+
+  .badge-alerta {
+    display: inline-block;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--danger);
+    border: 1px solid rgba(168,90,90,0.5);
+    background: rgba(168,90,90,0.08);
+    padding: 4px 10px;
+    border-radius: 1px;
+    margin-left: 8px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; }
   }
@@ -427,6 +489,9 @@
     <div class="section-id">Painel / Projetos</div>
   </div>
   <div class="rule"></div>
+
+  <div class="resumo-comercial" id="resumo"></div>
+  <div class="resumo-nota">Resumo considera apenas os projetos carregados nesta página, não o total do banco.</div>
 
   <div class="bar">
     <select id="filtro">
@@ -515,6 +580,43 @@ function diasDesde(isoDate) {
   return `há ${dias} dias`;
 }
 
+// Resumo comercial: calculado só sobre os projetos já carregados nesta página (ver aviso no HTML) —
+// não é uma contagem total do banco. "Ganhos/perdidos" não é exibido porque o enum atual de status
+// (briefing/orcamento_enviado/aprovado/em_producao/entregue) não tem esses estágios.
+function calcularResumo(projetos) {
+  const briefingsRecebidos = projetos.length;
+  const propostasEnviadas = projetos.filter(p => p.status !== 'briefing').length;
+  const followUpsFeitos = projetos.reduce((soma, p) => soma + (p.followUpCount || 0), 0);
+  return { briefingsRecebidos, propostasEnviadas, followUpsFeitos };
+}
+
+function renderResumo(projetos) {
+  const { briefingsRecebidos, propostasEnviadas, followUpsFeitos } = calcularResumo(projetos);
+  document.getElementById('resumo').innerHTML = `
+    <div class="resumo-item"><strong>${briefingsRecebidos}</strong><span>Briefings recebidos</span></div>
+    <div class="resumo-item"><strong>${propostasEnviadas}</strong><span>Propostas enviadas</span></div>
+    <div class="resumo-item"><strong>${followUpsFeitos}</strong><span>Follow-ups feitos</span></div>
+  `;
+}
+
+// "Precisa de follow-up": só para leads em orcamento_enviado, usando dados de tracking já existentes
+// (statusChangedAt/followUpCount/lastFollowUpAt, de proposal-tracking-v1). Sem dado suficiente
+// (lead antigo, sem statusChangedAt/lastFollowUpAt), nunca destaca — sem inventar urgência sem base real.
+function precisaFollowUp(p) {
+  if (p.status !== 'orcamento_enviado') return false;
+  const HORA_MS = 60 * 60 * 1000;
+  const DIA_MS = 24 * HORA_MS;
+  if (p.followUpCount === 0) {
+    if (!p.statusChangedAt) return false;
+    return (Date.now() - new Date(p.statusChangedAt).getTime()) >= 48 * HORA_MS;
+  }
+  if (p.followUpCount === 1) {
+    if (!p.lastFollowUpAt) return false;
+    return (Date.now() - new Date(p.lastFollowUpAt).getTime()) >= 3 * DIA_MS;
+  }
+  return false; // followUpCount >= 2: os dois follow-ups já rastreados foram feitos, fora do escopo desta versão
+}
+
 // transforma URLs em links, depois de escapar o HTML
 function linkify(escaped) {
   return escaped.replace(/(https?:\/\/[^\s<]+)/g, url =>
@@ -562,6 +664,8 @@ function briefingBlocks(p) {
 }
 
 function render(projetos) {
+  renderResumo(projetos);
+
   if (!projetos.length) {
     grid.innerHTML = '';
     empty.textContent = 'Nenhum projeto encontrado.';
@@ -591,10 +695,13 @@ function render(projetos) {
       `<option value="${s}" ${s === p.status ? 'selected' : ''}>${STATUS_LABEL[s]}</option>`
     ).join('');
 
+    const destaqueFollowUp = precisaFollowUp(p);
+
     return `
-      <div class="card" data-id="${p._id}">
+      <div class="card ${destaqueFollowUp ? 'precisa-followup' : ''}" data-id="${p._id}">
         <h3>${escapeHtml(p.clientName)}</h3>
         <div class="contact">${escapeHtml(p.clientContact)}</div>
+        ${destaqueFollowUp ? '<span class="badge-alerta">Follow-up pendente</span>' : ''}
 
         <span class="tier ${tier}">${tier}</span>
         ${foiAjustado ? '<span class="adjusted">ajustado</span>' : ''}
