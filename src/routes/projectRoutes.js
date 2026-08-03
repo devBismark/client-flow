@@ -152,9 +152,34 @@ router.patch('/:id/status', projectsAdminLimiter, requireAdminKey, async (req, r
       });
     }
 
+    const existing = await Project.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: { message: 'Projeto não encontrado' } });
+    }
+
+    const updates = { status };
+    if (existing.status !== status) {
+      updates.statusChangedAt = new Date();
+    }
+
     const project = await Project.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updates,
+      { returnDocument: 'after', runValidators: true }
+    );
+
+    res.json({ data: project });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/projects/:id/follow-up — marcação manual de follow-up enviado (nunca automática)
+router.patch('/:id/follow-up', projectsAdminLimiter, requireAdminKey, async (req, res, next) => {
+  try {
+    const project = await Project.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { followUpCount: 1 }, $set: { lastFollowUpAt: new Date() } },
       { returnDocument: 'after', runValidators: true }
     );
 

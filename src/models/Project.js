@@ -87,6 +87,18 @@ const projectSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    statusChangedAt: {
+      type: Date,
+      default: null,
+    },
+    followUpCount: {
+      type: Number,
+      default: 0,
+    },
+    lastFollowUpAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

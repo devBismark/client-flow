@@ -205,6 +205,45 @@ describe('PATCH /api/projects/:id/status', () => {
   });
 });
 
+describe('PATCH /api/projects/:id/status — statusChangedAt', () => {
+  test('projeto recém-criado começa com statusChangedAt nulo', async () => {
+    const projeto = await criarProjeto();
+    expect(projeto.statusChangedAt).toBeNull();
+  });
+
+  test('grava statusChangedAt quando o status muda de fato', async () => {
+    const projeto = await criarProjeto();
+    const res = await request(app)
+      .patch(`/api/projects/${projeto._id}/status`)
+      .set(AUTH)
+      .send({ status: 'orcamento_enviado' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.statusChangedAt).not.toBeNull();
+  });
+
+  test('não altera statusChangedAt quando o mesmo status é reenviado', async () => {
+    const projeto = await criarProjeto();
+    await request(app)
+      .patch(`/api/projects/${projeto._id}/status`)
+      .set(AUTH)
+      .send({ status: 'orcamento_enviado' });
+
+    const primeira = await request(app).get(`/api/projects/${projeto._id}`).set(AUTH);
+    const statusChangedAtOriginal = primeira.body.data.statusChangedAt;
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const res = await request(app)
+      .patch(`/api/projects/${projeto._id}/status`)
+      .set(AUTH)
+      .send({ status: 'orcamento_enviado' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.statusChangedAt).toBe(statusChangedAtOriginal);
+  });
+});
+
 describe('GET /api/projects/:id/proposal', () => {
   test('gera orçamento com preço e entrada', async () => {
     const projeto = await criarProjeto();
@@ -283,6 +322,48 @@ describe('PATCH /api/projects/:id', () => {
       .set(AUTH)
       .send({ finalTier: 'premium' });
 
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/projects/:id/follow-up — marcação manual de follow-up', () => {
+  test('projeto recém-criado começa com followUpCount 0 e lastFollowUpAt nulo', async () => {
+    const projeto = await criarProjeto();
+    expect(projeto.followUpCount).toBe(0);
+    expect(projeto.lastFollowUpAt).toBeNull();
+  });
+
+  test('incrementa followUpCount e grava lastFollowUpAt', async () => {
+    const projeto = await criarProjeto();
+    const res = await request(app)
+      .patch(`/api/projects/${projeto._id}/follow-up`)
+      .set(AUTH)
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.followUpCount).toBe(1);
+    expect(res.body.data.lastFollowUpAt).not.toBeNull();
+  });
+
+  test('incrementa a cada chamada', async () => {
+    const projeto = await criarProjeto();
+    await request(app).patch(`/api/projects/${projeto._id}/follow-up`).set(AUTH).send({});
+    const res = await request(app).patch(`/api/projects/${projeto._id}/follow-up`).set(AUTH).send({});
+
+    expect(res.body.data.followUpCount).toBe(2);
+  });
+
+  test('401 sem admin key', async () => {
+    const projeto = await criarProjeto();
+    const res = await request(app).patch(`/api/projects/${projeto._id}/follow-up`).send({});
+    expect(res.status).toBe(401);
+  });
+
+  test('404 para projeto inexistente', async () => {
+    const res = await request(app)
+      .patch('/api/projects/000000000000000000000000/follow-up')
+      .set(AUTH)
+      .send({});
     expect(res.status).toBe(404);
   });
 });
@@ -446,6 +527,57 @@ describe('public/admin.html — botão "Guardar" salva o status (correção do s
   test('o handler de "Guardar" persiste o status usando a rota já existente PATCH /:id/status', () => {
     const handler = html.match(/card\.querySelector\('\.save'\)\.addEventListener\('click', async \(e\) => \{[\s\S]*?setTimeout\(carregar, 700\);\s*\}\);/)[0];
     expect(handler).toContain('patch(`/api/projects/${id}/status`, { status })');
+  });
+});
+
+describe('public/admin.html — botões "Marcar follow-up 1/2 enviado"', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('os dois botões de marcação só aparecem quando o status é "orcamento_enviado"', () => {
+    expect(html).toMatch(/p\.status === 'orcamento_enviado'[\s\S]{0,200}mark-followup1/);
+    expect(html).toMatch(/p\.status === 'orcamento_enviado'[\s\S]{0,200}mark-followup2/);
+  });
+
+  test('os rótulos deixam claro que é uma marcação de envio real, não uma cópia', () => {
+    expect(html).toContain('Marcar follow-up 1 enviado');
+    expect(html).toContain('Marcar follow-up 2 enviado');
+  });
+
+  test('os handlers de marcação fazem PATCH em /follow-up, distinto dos handlers de copiar', () => {
+    const handler1 = html.match(/markFollowup1Btn\.addEventListener\('click', async \(\) => \{[\s\S]*?\}\);/)[0];
+    const handler2 = html.match(/markFollowup2Btn\.addEventListener\('click', async \(\) => \{[\s\S]*?\}\);/)[0];
+
+    expect(handler1).toContain('/follow-up');
+    expect(handler2).toContain('/follow-up');
+    expect(handler1).not.toContain('clipboard');
+    expect(handler2).not.toContain('clipboard');
+  });
+
+  test('marcar follow-up recarrega os dados do projeto (não é só clipboard)', () => {
+    const handler1 = html.match(/markFollowup1Btn\.addEventListener\('click', async \(\) => \{[\s\S]*?\}\);/)[0];
+    expect(handler1).toContain('carregar');
+  });
+});
+
+describe('public/admin.html — indicadores de tracking', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'public', 'admin.html'),
+    'utf8'
+  );
+
+  test('indicador de dias desde o envio usa statusChangedAt, não updatedAt', () => {
+    expect(html).toContain('statusChangedAt');
+  });
+
+  test('indicador de follow-up só aparece quando followUpCount é maior que zero', () => {
+    expect(html).toMatch(/followUpCount/);
   });
 });
 
