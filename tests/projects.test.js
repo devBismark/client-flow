@@ -538,9 +538,22 @@ describe('public/admin.html — botões "Marcar follow-up 1/2 enviado"', () => {
     'utf8'
   );
 
-  test('os dois botões de marcação só aparecem quando o status é "orcamento_enviado"', () => {
-    expect(html).toMatch(/p\.status === 'orcamento_enviado'[\s\S]{0,200}mark-followup1/);
-    expect(html).toMatch(/p\.status === 'orcamento_enviado'[\s\S]{0,200}mark-followup2/);
+  test('a linha de marcação só existe quando o status é "orcamento_enviado" e followUpCount < 2', () => {
+    expect(html).toMatch(/p\.status === 'orcamento_enviado' && p\.followUpCount < 2/);
+  });
+
+  test('"Marcar follow-up 1 enviado" só aparece quando followUpCount é 0 (nunca junto com o botão 2)', () => {
+    expect(html).toMatch(/p\.followUpCount === 0[\s\S]{0,120}mark-followup1/);
+  });
+
+  test('"Marcar follow-up 2 enviado" só aparece quando followUpCount é 1 (nunca junto com o botão 1)', () => {
+    expect(html).toMatch(/p\.followUpCount === 1[\s\S]{0,120}mark-followup2/);
+  });
+
+  test('os dois botões nunca aparecem juntos — condições de count 0 e 1 são mutuamente exclusivas', () => {
+    // se o template tivesse uma condição solta (ex.: só status, sem followUpCount),
+    // o botão apareceria em count>=2 também — a guarda "=== 0"/"=== 1" evita isso
+    expect(html).not.toMatch(/p\.status === 'orcamento_enviado'\s*\?\s*`[^$]*mark-followup1/);
   });
 
   test('os rótulos deixam claro que é uma marcação de envio real, não uma cópia', () => {

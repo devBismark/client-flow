@@ -620,10 +620,10 @@ function render(projetos) {
           ${p.photoUrls && p.photoUrls.length ? `<button class="btn-link download-photos">Baixar fotos (${p.photoUrls.length})</button>` : ''}
         </div>
 
-        ${p.status === 'orcamento_enviado' ? `
+        ${p.status === 'orcamento_enviado' && p.followUpCount < 2 ? `
         <div class="link-row">
-          <button class="btn-link mark-followup1">Marcar follow-up 1 enviado</button>
-          <button class="btn-link mark-followup2">Marcar follow-up 2 enviado</button>
+          ${p.followUpCount === 0 ? '<button class="btn-link mark-followup1">Marcar follow-up 1 enviado</button>' : ''}
+          ${p.followUpCount === 1 ? '<button class="btn-link mark-followup2">Marcar follow-up 2 enviado</button>' : ''}
         </div>
         ` : ''}
 
